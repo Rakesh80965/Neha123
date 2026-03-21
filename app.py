@@ -1,3 +1,4 @@
+import re
 from flask import Flask, render_template_string, request, jsonify
 
 app = Flask(__name__)
@@ -74,7 +75,7 @@ RULE_TABLE = {
         "count": {"min": 30, "priority": "HIGH"},
         "blend": {"values": ["cotton", "modal", "viscose", "tencel", "giza"], "priority": "HIGH"},
         "weave": {"values": ["plain", "dobby", "twill", "satin"], "priority": "LOW"},
-        "finish": {"values": ["soft touch", "brushed", "peach finish", "normal soft fin"], "priority": "HIGH"},
+        "finish": {"values": ["soft touch", "brushed", "peach finish", "normal soft fin", "csf", "sft", "pfh"], "priority": "HIGH"},
         "yarn_exclude": [],
         "negative_cross": [
             {"blend": "100% cotton", "finish": ["anti microbial", "eti"]}
@@ -83,20 +84,19 @@ RULE_TABLE = {
     "Drape": {
         "yarn": {"values": ["combed", "compact", "tfo", "slub"], "priority": "HIGH"},
         "blend": {"values": ["viscose", "modal", "tencel", "cotton"], "priority": "HIGH"},
+        "blend_exclude": ["100% cotton", "lycra"],
         "weave": {"values": ["dobby", "twill", "satin"], "priority": "HIGH"},
         "gsm": {"max": 170, "priority": "HIGH"},
         "yarn_exclude": ["carded"],
-        "negative_cross": [
-            {"blend": "100% cotton", "weave": ["dobby"]}
-        ],
+        "negative_cross": [],
     },
     "Shiny": {
         "yarn": {"values": ["compact", "tfo"], "priority": "HIGH"},
         "count": {"min": 30, "priority": "HIGH"},
         "blend": {"values": ["cotton", "modal", "viscose", "tencel", "giza"], "priority": "HIGH"},
         "blend_exclude": ["linen"],
-        "weave": {"values": ["twill", "satin", "dobby"], "priority": "LOW"},
-        "finish": {"values": ["sft", "silky finish", "calendar", "calender"], "priority": "HIGH"},
+        "weave": {"values": ["twill", "satin", "dobby"], "priority": "HIGH"},
+        "finish": {"values": ["silky finish", "calendar", "calender", "eti"], "priority": "LOW"},
         "yarn_exclude": [],
         "negative_cross": [
             {"blend": "100% cotton", "weave": ["plain", "dobby"]}
@@ -118,7 +118,7 @@ RULE_TABLE = {
         "yarn": {"values": ["compact", "carded", "slub", "tfo", "combed"], "priority": "LOW"},
         "blend": {"values": ["viscose", "modal", "tencel", "cotton", "linen"], "priority": "LOW"},
         "weave": {"values": ["plain", "dobby", "twill", "satin"], "priority": "LOW"},
-        "finish": {"values": ["csf", "wrinkle", "easy", "resin"], "priority": "HIGH"},
+        "finish": {"values": ["eti", "resin", "csf"], "priority": "HIGH"},
         "yarn_exclude": [],
         "negative_cross": [],
     },
@@ -160,6 +160,10 @@ RULE_TABLE = {
 # ============================================================================
 # HELPER FUNCTIONS
 # ============================================================================
+
+def normalize_product(product):
+    """Normalize product type by removing spaces around + for consistent matching"""
+    return re.sub(r'\s*\+\s*', '+', product.upper().strip())
 
 def contains_any(text, patterns):
     """Check if text contains any of the patterns (case-insensitive)"""
@@ -280,7 +284,8 @@ def filter_samples(product_type, gsm_min, gsm_max, blend, weave, yarn, feel_term
 
     # Step 1: Filter by direct parameters
     if product_type and product_type.upper() != "ALL":
-        results = [s for s in results if product_type.upper() in s["product"].upper()]
+        norm_filter = normalize_product(product_type)
+        results = [s for s in results if normalize_product(s["product"]) == norm_filter]
 
     if gsm_min:
         try:
