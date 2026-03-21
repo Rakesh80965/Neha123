@@ -103,7 +103,7 @@ RULE_TABLE = {
         ],
     },
     "Crisp look": {
-        "blend": {"values": ["linen", "cotton"], "priority": "HIGH"},
+        "blend": {"values": ["linen"], "exact_values": ["100% cotton"], "priority": "HIGH"},
         "weave": {"values": ["plain"], "priority": "LOW"},
         "yarn_exclude": [],
         "negative_cross": [],
@@ -123,11 +123,17 @@ RULE_TABLE = {
         "negative_cross": [],
     },
     "Textured": {
-        "yarn": {"values": ["carded", "slub", "combed", "compact", "tfo"], "priority": "HIGH"},
-        "weave": {"values": ["dobby", "plain", "twill", "hbt"], "priority": "HIGH"},
-        "finish": {"values": ["brushed"], "priority": "LOW"},
-        "yarn_exclude": [],
-        "negative_cross": [],
+        "combo_mode": True,
+        "positive_combos": [
+            # High positive (score 2)
+            {"score": 2, "yarn": ["slub"], "weave": ["plain", "twill", "dobby", "satin", "hbt"]},
+            {"score": 2, "yarn": ["carded"], "weave": ["dobby"]},
+            {"score": 2, "blend": ["linen"], "weave": ["dobby", "plain", "twill"]},
+            # Medium positive (score 1)
+            {"score": 1, "yarn": ["carded"], "weave": ["plain", "twill"]},
+            {"score": 1, "weave": ["dobby"]},
+        ],
+        "finish_bonus": ["brushed"],
     },
     "Dense": {
         "weave": {"values": ["twill", "matt", "plain"], "priority": "LOW"},
@@ -194,7 +200,13 @@ def check_attribute_match(sample, attr_key, attr_rule):
     """Check if a single attribute matches the rule condition"""
     if attr_key in ("yarn", "blend", "weave", "finish"):
         values = attr_rule.get("values", [])
-        return contains_any(sample[attr_key], values)
+        exact_values = attr_rule.get("exact_values", [])
+        if contains_any(sample[attr_key], values):
+            return True
+        for ev in exact_values:
+            if sample[attr_key].lower().strip() == ev.lower().strip():
+                return True
+        return False
     elif attr_key == "count":
         if "min" in attr_rule and sample["count_avg"] < attr_rule["min"]:
             return False
@@ -209,6 +221,32 @@ def check_attribute_match(sample, attr_key, attr_rule):
         return True
     return True
 
+def check_combo_rule(sample, rule):
+    """Check sample against combination-based rules.
+    Returns (passes, score) where score indicates match quality.
+    """
+    best_score = 0
+    for combo in rule.get("positive_combos", []):
+        combo_score = combo["score"]
+        match = True
+        for attr in ("yarn", "blend", "weave"):
+            if attr in combo:
+                if not contains_any(sample[attr], combo[attr]):
+                    match = False
+                    break
+        if match:
+            best_score = max(best_score, combo_score)
+
+    if best_score == 0:
+        return False, 0
+
+    # Add finish bonus
+    finish_bonus = rule.get("finish_bonus", [])
+    if finish_bonus and contains_any(sample["finish"], finish_bonus):
+        best_score += 1
+
+    return True, best_score
+
 def check_sample_against_rule(sample, standard_term):
     """Check sample against rule with priority support.
     Returns (passes, score):
@@ -218,6 +256,10 @@ def check_sample_against_rule(sample, standard_term):
     rule = RULE_TABLE.get(standard_term)
     if not rule:
         return True, 0
+
+    # Handle combination-based rules (e.g., Textured)
+    if rule.get("combo_mode"):
+        return check_combo_rule(sample, rule)
 
     # Check yarn_exclude (always hard reject)
     if rule.get("yarn_exclude"):
