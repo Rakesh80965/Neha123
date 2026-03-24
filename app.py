@@ -7,46 +7,56 @@ app = Flask(__name__)
 # SAMPLES DATABASE
 # ============================================================================
 SAMPLES = [
-    {"sample_no": 1001, "article": "Decent", "product": "YD + PRINT", "yarn": "COMBED", "count": "30*30", "count_avg": 30, "construction": "088*072", "construction_total": 160, "blend": "100% COTTON", "weave": "TWILL", "finish": "SOFT TOUCH", "gsm": 132},
+    {"sample_no": 1001, "article": "SQUARE FLORAL", "product": "WHITE + PRINT", "yarn": "COMPACT", "count": "30*30", "count_avg": 30, "construction": "104*072", "construction_total": 176, "blend": "100% VISCOSE", "weave": "TWILL", "finish": "SOFT TOUCH", "gsm": 147},
     {"sample_no": 1002, "article": "HBS DOT PRINT", "product": "DYED + PRINT", "yarn": "COMPACT", "count": "40*40", "count_avg": 40, "construction": "110*070", "construction_total": 180, "blend": "100% COTTON", "weave": "PLAIN", "finish": "SOFT TOUCH", "gsm": 113},
-    {"sample_no": 1003, "article": "BELLE MEADE", "product": "DYED", "yarn": "COMPACT", "count": "40*40", "count_avg": 40, "construction": "140*076", "construction_total": 216, "blend": "COTTON:LYCRA", "weave": "PLAIN", "finish": "CSF", "gsm": 135},
+    {"sample_no": 1003, "article": "BELLE MEADE", "product": "DYED", "yarn": "COMPACT", "count": "40*40", "count_avg": 40, "construction": "140*076", "construction_total": 216, "blend": "COTTON:LYCRA", "weave": "PLAIN", "finish": "COTTON SOFT FIN", "gsm": 135},
     {"sample_no": 1004, "article": "GLENDALE", "product": "WHITE + PRINT", "yarn": "COMPACT", "count": "50*50", "count_avg": 50, "construction": "132*084", "construction_total": 216, "blend": "100% COTTON", "weave": "DOBBY", "finish": "SOFT TOUCH", "gsm": 109},
-    {"sample_no": 1005, "article": "NAVY PEACOAT", "product": "DYED + PRINT", "yarn": "COMPACT", "count": "40*40", "count_avg": 40, "construction": "104*072", "construction_total": 176, "blend": "100% COTTON", "weave": "PLAIN", "finish": "PFH", "gsm": 111},
-    {"sample_no": 1006, "article": "MSHR84 CHAVAL", "product": "WHITE + PRINT", "yarn": "CARDED", "count": "40*40", "count_avg": 40, "construction": "104*072", "construction_total": 176, "blend": "100% COTTON", "weave": "PLAIN", "finish": "CSF", "gsm": 111},
+    {"sample_no": 1005, "article": "NAVY PEACOAT", "product": "DYED + PRINT", "yarn": "COMPACT", "count": "40*40", "count_avg": 40, "construction": "104*072", "construction_total": 176, "blend": "100% COTTON", "weave": "PLAIN", "finish": "PEACH FIN HAND", "gsm": 111},
+    {"sample_no": 1006, "article": "MSHR84 CHAVAL", "product": "WHITE + PRINT", "yarn": "CARDED", "count": "40*40", "count_avg": 40, "construction": "104*072", "construction_total": 176, "blend": "100% COTTON", "weave": "PLAIN", "finish": "COTTON SOFT FIN", "gsm": 111},
     {"sample_no": 1007, "article": "GARY", "product": "DYED + PRINT", "yarn": "COMPACT", "count": "21*21", "count_avg": 21, "construction": "054*048", "construction_total": 102, "blend": "COTTON:LINEN", "weave": "PLAIN", "finish": "SOFT TOUCH", "gsm": 122},
-    {"sample_no": 1008, "article": "BELLE MEADE", "product": "DYED", "yarn": "COMPACT", "count": "40*40", "count_avg": 40, "construction": "140*076", "construction_total": 216, "blend": "COTTON:LYCRA", "weave": "PLAIN", "finish": "CSF", "gsm": 135},
-    {"sample_no": 1009, "article": "24P5 BL", "product": "WHITE + PRINT", "yarn": "COMPACT", "count": "60*60", "count_avg": 60, "construction": "148*106", "construction_total": 254, "blend": "100% COTTON", "weave": "PLAIN", "finish": "SFT", "gsm": 106},
-    {"sample_no": 1010, "article": "f323 091", "product": "DYED + PRINT", "yarn": "COMPACT", "count": "50*50", "count_avg": 50, "construction": "130*084", "construction_total": 214, "blend": "COTTON:LYCRA", "weave": "TWILL", "finish": "SFT", "gsm": 108},
-    {"sample_no": 1011, "article": "ALMETA", "product": "WHITE + PRINT", "yarn": "COMPACT YARN", "count": "40*40", "count_avg": 40, "construction": "116*080", "construction_total": 196, "blend": "COTTON:LYCRA", "weave": "PLAIN", "finish": "PFH", "gsm": 123},
-    {"sample_no": 1012, "article": "LUMBERTON", "product": "CHECKS", "yarn": "SLUB", "count": "40*30", "count_avg": 35, "construction": "080*054", "construction_total": 134, "blend": "100% COTTON", "weave": "PLAIN", "finish": "NORMAL SOFT FIN", "gsm": 119},
-    {"sample_no": 1013, "article": "A37900DA", "product": "CHECKS", "yarn": "COMPACT", "count": "30*30", "count_avg": 30, "construction": "094*080", "construction_total": 174, "blend": "100% COTTON", "weave": "DOBBY", "finish": "ETI+SOFT TOUCH", "gsm": 144},
-    {"sample_no": 1014, "article": "A37055PA", "product": "DYED + PRINT", "yarn": "COMPACT", "count": "40*40", "count_avg": 40, "construction": "128*066", "construction_total": 194, "blend": "COTTON:LYCRA", "weave": "PLAIN", "finish": "PFH", "gsm": 121},
-    {"sample_no": 1015, "article": "SANGARIA BASE", "product": "DYED + PRINT", "yarn": "COMPACT", "count": "50*60", "count_avg": 55, "construction": "144*104", "construction_total": 248, "blend": "COTTON:MODAL", "weave": "TWILL", "finish": "ETI", "gsm": 118},
-    {"sample_no": 1016, "article": "AG-2220", "product": "DYED + PRINT", "yarn": "COMPACT", "count": "40*40", "count_avg": 40, "construction": "132*072", "construction_total": 204, "blend": "COTTON:LYCRA", "weave": "PLAIN", "finish": "SOFT TOUCH", "gsm": 123},
-    {"sample_no": 1017, "article": "61606V", "product": "DYED + PRINT", "yarn": "COMPACT", "count": "40*40", "count_avg": 40, "construction": "116*080", "construction_total": 196, "blend": "COTTON:LYCRA", "weave": "PLAIN", "finish": "PFH", "gsm": 123},
-    {"sample_no": 1018, "article": "AW24-DBCH", "product": "DYED", "yarn": "COMPACT", "count": "60*60", "count_avg": 60, "construction": "195*104", "construction_total": 299, "blend": "100% COTTON", "weave": "DOBBY-SATIN", "finish": "CSF", "gsm": 123},
-    {"sample_no": 1019, "article": "AW24-WBST", "product": "DYED + PRINT", "yarn": "COMPACT", "count": "30*30", "count_avg": 30, "construction": "104*072", "construction_total": 176, "blend": "100%VISCOSE", "weave": "TWILL", "finish": "SFT", "gsm": 147},
-    {"sample_no": 1020, "article": "CRECK", "product": "PRINT", "yarn": "COMPACT", "count": "30*30", "count_avg": 30, "construction": "104*072", "construction_total": 176, "blend": "100%VISCOSE", "weave": "TWILL", "finish": "SFT", "gsm": 147},
-    {"sample_no": 1021, "article": "BARBOUR", "product": "CHECKS", "yarn": "COMPACT", "count": "30*30", "count_avg": 30, "construction": "064*054", "construction_total": 118, "blend": "COTTON:TENCEL", "weave": "TWILL", "finish": "BRUSHED", "gsm": 196},
-    {"sample_no": 1022, "article": "MOUNTAIN - E", "product": "DYED", "yarn": "TFO", "count": "60*30", "count_avg": 45, "construction": "200*128", "construction_total": 328, "blend": "COTTON:LYCRA", "weave": "PLAIN", "finish": "NORMAL SOFT FIN", "gsm": 273},
-    {"sample_no": 1023, "article": "A29600PC", "product": "DYED", "yarn": "TFO", "count": "20*20", "count_avg": 20, "construction": "064*054", "construction_total": 118, "blend": "100% COTTON", "weave": "TWILL", "finish": "NORMAL SOFT FIN", "gsm": 294},
-    {"sample_no": 1024, "article": "A37864PB", "product": "YD+PRINT", "yarn": "COMPACT", "count": "60*60", "count_avg": 60, "construction": "138*096", "construction_total": 234, "blend": "100% COTTON", "weave": "TWILL", "finish": "NORMAL SOFT FIN", "gsm": 97},
-    {"sample_no": 1025, "article": "A37342PA", "product": "YD+PRINT", "yarn": "COMPACT", "count": "40*40", "count_avg": 40, "construction": "062*056", "construction_total": 118, "blend": "100% VISCOSE", "weave": "TWILL", "finish": "BRUSHED", "gsm": 147},
-    {"sample_no": 1026, "article": "COTTON VISCOSE PRI", "product": "DYED +PRINT", "yarn": "COMPACT", "count": "60*60", "count_avg": 60, "construction": "180*104", "construction_total": 284, "blend": "COTTON:MODAL", "weave": "SATIN", "finish": "ETI+CALENDER", "gsm": 118},
-    {"sample_no": 1027, "article": "BLUE SNOW FLAKES", "product": "DYED +PRINT", "yarn": "COMPACT", "count": "40*40", "count_avg": 40, "construction": "110*076", "construction_total": 186, "blend": "COTTON:VISCOSE", "weave": "TWILL", "finish": "BRUSHED", "gsm": 117},
-    {"sample_no": 1028, "article": "A37238RA", "product": "PRINT", "yarn": "COMPACT", "count": "30*30", "count_avg": 30, "construction": "096*060", "construction_total": 156, "blend": "COTTON:VISCOSE", "weave": "TWILL", "finish": "BRUSHED", "gsm": 131},
-    {"sample_no": 1029, "article": "F326PJSH", "product": "PRINT", "yarn": "COMPACT", "count": "60*60", "count_avg": 60, "construction": "180*104", "construction_total": 284, "blend": "COTTON:MODAL", "weave": "SATIN", "finish": "ETI+CALENDER", "gsm": 118},
-    {"sample_no": 1030, "article": "47F003G", "product": "STRIPES", "yarn": "SLUB", "count": "20*20", "count_avg": 20, "construction": "072*062", "construction_total": 134, "blend": "100% COTTON", "weave": "DOBBY", "finish": "NORMAL SOFT FIN", "gsm": 167},
-    {"sample_no": 1031, "article": "62068", "product": "DYED", "yarn": "COMPACT", "count": "40*40", "count_avg": 40, "construction": "128*080", "construction_total": 208, "blend": "COTTON:LINEN", "weave": "PLAIN", "finish": "SFT", "gsm": 130},
-    {"sample_no": 1032, "article": "HARLAN", "product": "WHITE+PRINT", "yarn": "COMPACT", "count": "50*50", "count_avg": 50, "construction": "144*092", "construction_total": 236, "blend": "100% COTTON", "weave": "DOBBY", "finish": "SOFT TOUCH", "gsm": 119},
-    {"sample_no": 1033, "article": "MS12-375", "product": "YD+PRINT", "yarn": "COMPACT", "count": "40*30", "count_avg": 35, "construction": "120*066", "construction_total": 186, "blend": "100% COTTON", "weave": "TWILL", "finish": "CSF", "gsm": 131},
-    {"sample_no": 1034, "article": "MFS-15346", "product": "DYED", "yarn": "COMPACT", "count": "60*60", "count_avg": 60, "construction": "194*104", "construction_total": 298, "blend": "100% COTTON", "weave": "DOBBY*SATIN", "finish": "SFT", "gsm": 124},
-    {"sample_no": 1035, "article": "MFS_16730", "product": "PRINT", "yarn": "COMPACT", "count": "50*60", "count_avg": 55, "construction": "144*104", "construction_total": 248, "blend": "COTTON:MODAL", "weave": "COTTON:MODAL", "finish": "CSF", "gsm": 116},
-    {"sample_no": 1036, "article": "MIDLAND", "product": "CHECKS", "yarn": "COMPACT", "count": "60*20", "count_avg": 40, "construction": "124*064", "construction_total": 188, "blend": "COTTON:LINEN", "weave": "COTTON:LINEN", "finish": "SOFT TOUCH", "gsm": 128},
-    {"sample_no": 1037, "article": "A38235PA", "product": "PRINT", "yarn": "COMPACT", "count": "60*60", "count_avg": 60, "construction": "154*096", "construction_total": 250, "blend": "100%MODAL", "weave": "PLAIN", "finish": "NORMAL SOFT FIN", "gsm": 112},
-    {"sample_no": 1038, "article": "A5680", "product": "DYED + PRINT", "yarn": "COMPACT*SLUB", "count": "50*30", "count_avg": 40, "construction": "104*088", "construction_total": 192, "blend": "100% COTTON", "weave": "TWILLHBT", "finish": "SOFT TOUCH", "gsm": 121},
-    {"sample_no": 1039, "article": "MOUNTAIN-B", "product": "DYED", "yarn": "TFO", "count": "20*20", "count_avg": 20, "construction": "064*054", "construction_total": 118, "blend": "100% COTTON", "weave": "DOBBY", "finish": "NORMAL SOFT FIN", "gsm": 294},
-    {"sample_no": 1040, "article": "YD+PIGMENT PRINT", "product": "YD+PIGMENT PRINT", "yarn": "COMPACT", "count": "40*40", "count_avg": 40, "construction": "104*088", "construction_total": 192, "blend": "COTTON:TENCEL", "weave": "TWILLHBT", "finish": "SOFT TOUCH", "gsm": 120},
+    {"sample_no": 1008, "article": "NPD 44", "product": "DYED", "yarn": "COMPACT", "count": "30*44", "count_avg": 37, "construction": "076*044", "construction_total": 120, "blend": "COTTON:LENIN", "weave": "PLAIN", "finish": "NORMAL SOFT FIN", "gsm": 133},
+    {"sample_no": 1009, "article": "24P5 BL", "product": "WHITE + PRINT", "yarn": "COMPACT", "count": "60*60", "count_avg": 60, "construction": "148*106", "construction_total": 254, "blend": "100% COTTON", "weave": "PLAIN", "finish": "SOFT FIN TOUCH", "gsm": 106},
+    {"sample_no": 1010, "article": "f323 091", "product": "DYED + PRINT", "yarn": "COMPACT", "count": "50*50", "count_avg": 50, "construction": "130*084", "construction_total": 214, "blend": "COTTON:LYCRA", "weave": "TWILL", "finish": "SOFT FIN TOUCH", "gsm": 108},
+    {"sample_no": 1011, "article": "MAROO", "product": "WHITE + PRINT", "yarn": "COMPACT YARN", "count": "40*40", "count_avg": 40, "construction": "116*080", "construction_total": 196, "blend": "COTTON:LYCRA", "weave": "PLAIN", "finish": "PEACH FIN HAND", "gsm": 123},
+    {"sample_no": 1012, "article": "ALMETA", "product": "CHECKS", "yarn": "SLUB", "count": "40*30", "count_avg": 35, "construction": "080*054", "construction_total": 134, "blend": "100% COTTON", "weave": "PLAIN", "finish": "NORMAL SOFT FIN", "gsm": 119},
+    {"sample_no": 1013, "article": "LUMBERTON", "product": "CHECKS", "yarn": "COMPACT", "count": "30*30", "count_avg": 30, "construction": "094*080", "construction_total": 174, "blend": "100% COTTON", "weave": "DOBBY", "finish": "EASY TO IRON+SOFT TOUCH", "gsm": 144},
+    {"sample_no": 1014, "article": "A37900DA", "product": "DYED + PRINT", "yarn": "COMPACT", "count": "40*40", "count_avg": 40, "construction": "128*066", "construction_total": 194, "blend": "COTTON:LYCRA", "weave": "PLAIN", "finish": "PEACH FIN HAND", "gsm": 121},
+    {"sample_no": 1015, "article": "A37055PA", "product": "DYED + PRINT", "yarn": "COMPACT", "count": "50*60", "count_avg": 55, "construction": "144*104", "construction_total": 248, "blend": "COTTON:MODAL", "weave": "TWILL", "finish": "EASY TO IRON", "gsm": 118},
+    {"sample_no": 1016, "article": "SANGARIA BASE", "product": "DYED + PRINT", "yarn": "COMPACT", "count": "40*40", "count_avg": 40, "construction": "132*072", "construction_total": 204, "blend": "COTTON:LYCRA", "weave": "PLAIN", "finish": "SOFT TOUCH", "gsm": 123},
+    {"sample_no": 1017, "article": "AG-2220", "product": "DYED + PRINT", "yarn": "COMPACT", "count": "40*40", "count_avg": 40, "construction": "116*080", "construction_total": 196, "blend": "COTTON:LYCRA", "weave": "PLAIN", "finish": "PEACH FIN HAND", "gsm": 123},
+    {"sample_no": 1018, "article": "61606V", "product": "DYED", "yarn": "COMPACT", "count": "60*60", "count_avg": 60, "construction": "195*104", "construction_total": 299, "blend": "100% COTTON", "weave": "DOBBY-SATIN", "finish": "COTTON SOFT FIN", "gsm": 123},
+    {"sample_no": 1019, "article": "AW24-DBCH", "product": "DYED + PRINT", "yarn": "COMPACT", "count": "30*30", "count_avg": 30, "construction": "104*072", "construction_total": 176, "blend": "100%VISCOSE", "weave": "TWILL", "finish": "SOFT FIN TOUCH", "gsm": 147},
+    {"sample_no": 1020, "article": "AW24-WBST", "product": "PRINT", "yarn": "COMPACT", "count": "30*30", "count_avg": 30, "construction": "104*072", "construction_total": 176, "blend": "100%VISCOSE", "weave": "TWILL", "finish": "SOFT FIN TOUCH", "gsm": 147},
+    {"sample_no": 1021, "article": "CRECK", "product": "CHECKS", "yarn": "COMPACT", "count": "30*30", "count_avg": 30, "construction": "064*054", "construction_total": 118, "blend": "COTTON:TENCEL", "weave": "TWILL", "finish": "BRUSHED", "gsm": 196},
+    {"sample_no": 1022, "article": "BARBOUR", "product": "DYED", "yarn": "TFO", "count": "60*30", "count_avg": 45, "construction": "200*128", "construction_total": 328, "blend": "COTTON:LYCRA", "weave": "PLAIN", "finish": "NORMAL SOFT FIN", "gsm": 273},
+    {"sample_no": 1023, "article": "MOUNTAIN - E", "product": "DYED", "yarn": "TFO", "count": "20*20", "count_avg": 20, "construction": "064*054", "construction_total": 118, "blend": "100% COTTON", "weave": "TWILL", "finish": "NORMAL SOFT FIN", "gsm": 294},
+    {"sample_no": 1024, "article": "A29600PC", "product": "YD+PRINT", "yarn": "COMPACT", "count": "60*60", "count_avg": 60, "construction": "138*096", "construction_total": 234, "blend": "100% COTTON", "weave": "TWILL", "finish": "NORMAL SOFT FIN", "gsm": 97},
+    {"sample_no": 1025, "article": "A37864PB", "product": "YD+PRINT", "yarn": "COMPACT", "count": "40*40", "count_avg": 40, "construction": "062*056", "construction_total": 118, "blend": "100% VISCOSE", "weave": "TWILL", "finish": "BRUSHED", "gsm": 147},
+    {"sample_no": 1026, "article": "A37342PA", "product": "DYED +PRINT", "yarn": "COMPACT", "count": "60*60", "count_avg": 60, "construction": "180*104", "construction_total": 284, "blend": "COTTON:MODAL", "weave": "SATIN", "finish": "EASY TO IRON+CALENDER", "gsm": 118},
+    {"sample_no": 1027, "article": "CV PRI", "product": "DYED +PRINT", "yarn": "COMPACT", "count": "40*40", "count_avg": 40, "construction": "110*076", "construction_total": 186, "blend": "COTTON:VISCOSE", "weave": "TWILL", "finish": "BRUSHED", "gsm": 117},
+    {"sample_no": 1028, "article": "BLUE SNOW FLAKES", "product": "PRINT", "yarn": "COMPACT", "count": "30*30", "count_avg": 30, "construction": "096*060", "construction_total": 156, "blend": "COTTON:VISCOSE", "weave": "TWILL", "finish": "BRUSHED", "gsm": 131},
+    {"sample_no": 1029, "article": "A37238RA", "product": "PRINT", "yarn": "COMPACT", "count": "60*60", "count_avg": 60, "construction": "180*104", "construction_total": 284, "blend": "COTTON:MODAL", "weave": "SATIN", "finish": "EASY TO IRON+CALENDER", "gsm": 118},
+    {"sample_no": 1030, "article": "F326PJSH", "product": "STRIPES", "yarn": "SLUB", "count": "20*20", "count_avg": 20, "construction": "072*062", "construction_total": 134, "blend": "100% COTTON", "weave": "DOBBY", "finish": "NORMAL SOFT FIN", "gsm": 167},
+    {"sample_no": 1031, "article": "47F003G", "product": "DYED", "yarn": "COMPACT", "count": "40*40", "count_avg": 40, "construction": "128*080", "construction_total": 208, "blend": "COTTON:LINEN", "weave": "PLAIN", "finish": "COTTON SOFT FIN", "gsm": 130},
+    {"sample_no": 1032, "article": "62068", "product": "WHITE+PRINT", "yarn": "COMPACT", "count": "50*50", "count_avg": 50, "construction": "144*092", "construction_total": 236, "blend": "100% COTTON", "weave": "DOBBY", "finish": "SOFT FIN TOUCH", "gsm": 119},
+    {"sample_no": 1033, "article": "HARLAN", "product": "YD+PRINT", "yarn": "COMPACT", "count": "40*30", "count_avg": 35, "construction": "120*066", "construction_total": 186, "blend": "100% COTTON", "weave": "TWILL", "finish": "SOFT TOUCH", "gsm": 131},
+    {"sample_no": 1034, "article": "MS12-375", "product": "DYED", "yarn": "COMPACT", "count": "60*60", "count_avg": 60, "construction": "194*104", "construction_total": 298, "blend": "100% COTTON", "weave": "DOBBY*SATIN", "finish": "COTTON SOFT FIN", "gsm": 124},
+    {"sample_no": 1035, "article": "MFS-15346", "product": "PRINT", "yarn": "COMPACT", "count": "50*60", "count_avg": 55, "construction": "144*104", "construction_total": 248, "blend": "COTTON:MODAL", "weave": "TWILL", "finish": "SOFT FIN TOUCH", "gsm": 116},
+    {"sample_no": 1036, "article": "MFS_16730", "product": "CHECKS", "yarn": "COMPACT", "count": "60*20", "count_avg": 40, "construction": "124*064", "construction_total": 188, "blend": "COTTON:LINEN", "weave": "PLAIN", "finish": "COTTON SOFT FIN", "gsm": 128},
+    {"sample_no": 1037, "article": "MIDLAND", "product": "PRINT", "yarn": "COMPACT", "count": "60*60", "count_avg": 60, "construction": "154*096", "construction_total": 250, "blend": "100%MODAL", "weave": "DOBBY", "finish": "SOFT TOUCH", "gsm": 112},
+    {"sample_no": 1038, "article": "A38235PA", "product": "DYED + PRINT", "yarn": "COMPACT*SLUB", "count": "50*30", "count_avg": 40, "construction": "112*066", "construction_total": 178, "blend": "100% COTTON", "weave": "PLAIN", "finish": "NORMAL SOFT FIN", "gsm": 121},
+    {"sample_no": 1039, "article": "A5680", "product": "YD+PIGMENT PRINT", "yarn": "COMPACT", "count": "40*40", "count_avg": 40, "construction": "104*088", "construction_total": 192, "blend": "COTTON:TENCEL", "weave": "TWILL", "finish": "SOFT TOUCH", "gsm": 120},
+    {"sample_no": 1040, "article": "MOUNTAIN-B", "product": "DYED", "yarn": "TFO", "count": "20*20", "count_avg": 20, "construction": "064*054", "construction_total": 118, "blend": "100% COTTON", "weave": "DOBBY", "finish": "NORMAL SOFT FIN", "gsm": 294},
+    {"sample_no": 1041, "article": "BDLN-0010", "product": "WHITE", "yarn": "COMPACT", "count": "60*60", "count_avg": 60, "construction": "180*110", "construction_total": 290, "blend": "100% COTTON", "weave": "SATIN", "finish": "ANTI MICROBIAL", "gsm": 122},
+    {"sample_no": 1042, "article": "CREW", "product": "WHITE+PRINT", "yarn": "COMPACT", "count": "30*30", "count_avg": 30, "construction": "104*072", "construction_total": 176, "blend": "100%VISCOSE", "weave": "TWILL", "finish": "ANTI MICROBIAL", "gsm": 146},
+    {"sample_no": 1043, "article": "BLOSSOM", "product": "WHITE+PRINT", "yarn": "COMPACT", "count": "40*30", "count_avg": 35, "construction": "120*072", "construction_total": 192, "blend": "COTTON:VISCOSE", "weave": "TWILL", "finish": "SOFT TOUCH+ANTI MICROBIAL", "gsm": 134},
+    {"sample_no": 1044, "article": "40017252", "product": "WHITE+PRINT", "yarn": "COMPACT", "count": "30*30", "count_avg": 30, "construction": "084*068", "construction_total": 152, "blend": "TENCEL:LINEN", "weave": "PLAIN", "finish": "NORMAL SOFT FIN", "gsm": 126},
+    {"sample_no": 1045, "article": "OLIVE", "product": "DYED+PRINT", "yarn": "COMPACT", "count": "70*70", "count_avg": 70, "construction": "110*092", "construction_total": 202, "blend": "100% COTTON GIZ", "weave": "PLAIN", "finish": "SOFT TOUCH", "gsm": 73},
+    {"sample_no": 1046, "article": "A37681PA", "product": "WHITE+PRINT", "yarn": "COMPACT", "count": "80*70", "count_avg": 75, "construction": "154*120", "construction_total": 274, "blend": "100% COTTON GIZ", "weave": "PLAIN", "finish": "NORMAL SOFT FIN", "gsm": 91},
+    {"sample_no": 1047, "article": "16027", "product": "CHECKS", "yarn": "TFO", "count": "80*40", "count_avg": 60, "construction": "104*072", "construction_total": 176, "blend": "COTTON:LYCRA", "weave": "PLAIN", "finish": "SOFT TOUCH", "gsm": 111},
+    {"sample_no": 1048, "article": "F323PX", "product": "WHITE + PRINT", "yarn": "COMPACT", "count": "50*50", "count_avg": 50, "construction": "130*084", "construction_total": 214, "blend": "COTTON:LYCRA", "weave": "TWILL", "finish": "SOFT FIN TOUCH", "gsm": 108},
+    {"sample_no": 1049, "article": "SMIL08182", "product": "CHECKS", "yarn": "SLUB", "count": "30*30", "count_avg": 30, "construction": "084*076", "construction_total": 160, "blend": "100% COTTON", "weave": "TWILL", "finish": "COTTON SOFT FIN", "gsm": 134},
+    {"sample_no": 1050, "article": "TS23FMFW", "product": "DYED + PRINT", "yarn": "COMPACT", "count": "60*60", "count_avg": 60, "construction": "180*104", "construction_total": 284, "blend": "100% COTTON", "weave": "SATIN", "finish": "SOFT FIN TOUCH", "gsm": 119},
 ]
 
 # ============================================================================
@@ -54,16 +64,14 @@ SAMPLES = [
 # ============================================================================
 FEEL_DICTIONARY = {
     "Soft Feel": ["soft handfeel", "soft touch", "silky touch", "smooth feel", "peach finish", "soft fleece", "soft", "silky", "smooth", "peach"],
-    "Premium Look": ["premium", "luxe", "luxury", "rich look", "high-end", "superior look"],
+    "Good Drape": ["drapey", "drapy", "good fall", "flowy", "fluid", "elegant fall", "drape", "flow", "good drape"],
     "Shiny": ["high shine", "lustrous", "glossy", "sheen", "bright surface", "satin look", "shiny", "shine", "gloss", "lustre"],
-    "Breathable": ["breathable", "airy", "ventilated", "summer friendly", "cool wearing", "cool", "breathe"],
-    "Lightweight": ["lightweight", "light weight", "feather feel", "low weight", "ultra light", "light"],
-    "Crisp look": ["crisp", "stiff", "paper touch", "structured feel", "firm hand", "firm"],
-    "Textured": ["textured", "grainy", "slub look", "uneven surface", "raw texture", "texture", "slub"],
-    "Drape": ["drapey", "drapy", "good fall", "flowy", "fluid", "elegant fall", "drape", "flow"],
-    "Dense": ["durable", "strong", "long life", "sturdy", "dense", "thick", "heavy"],
+    "Crisp": ["crisp", "stiff", "paper touch", "structured feel", "firm hand", "firm", "crisp look"],
     "Stretchable": ["stretchable", "stretch", "elastic", "lycra", "flex", "flexible", "spandex"],
     "Easy Care": ["easy care", "easy iron", "wrinkle free", "wrinkle resistant", "low maintenance", "wrinkle", "easy"],
+    "Textured": ["textured", "grainy", "slub look", "uneven surface", "raw texture", "texture", "slub"],
+    "Dense": ["durable", "strong", "long life", "sturdy", "dense", "thick", "heavy"],
+    "Anti Microbial": ["anti microbial", "antimicrobial", "anti-microbial", "antibacterial", "anti bacterial", "germ resistant", "hygienic"],
 }
 
 # ============================================================================
@@ -73,91 +81,70 @@ RULE_TABLE = {
     "Soft Feel": {
         "yarn": {"values": ["compact", "combed", "slub", "tfo"], "priority": "HIGH"},
         "count": {"min": 30, "priority": "HIGH"},
-        "blend": {"values": ["cotton", "modal", "viscose", "tencel", "giza"], "priority": "HIGH"},
-        "weave": {"values": ["plain", "dobby", "twill", "satin"], "priority": "LOW"},
-        "finish": {"values": ["soft touch", "brushed", "peach finish", "normal soft fin", "csf", "sft", "pfh"], "priority": "HIGH"},
+        "blend": {"values": ["cotton", "modal", "viscose", "tencel", "giz"], "priority": "HIGH"},
+        "blend_exclude": ["linen", "lenin"],
+        "finish": {"values": ["soft touch", "brushed", "peach fin hand", "normal soft fin", "soft fin touch", "cotton soft fin", "chemical soft fin", "calender", "easy to iron", "anti microbial"], "priority": "HIGH"},
         "yarn_exclude": [],
         "negative_cross": [
-            {"blend": "100% cotton", "finish": ["anti microbial", "eti"]}
+            {"blend": "100% cotton", "finish": ["anti microbial", "easy to iron"], "finish_override": ["soft touch", "brushed", "peach fin hand", "soft fin touch", "cotton soft fin"]}
         ],
     },
-    "Drape": {
-        "yarn": {"values": ["combed", "compact", "tfo", "slub"], "priority": "HIGH"},
-        "blend": {"values": ["viscose", "modal", "tencel", "cotton"], "priority": "HIGH"},
-        "blend_exclude": ["100% cotton", "lycra"],
-        "weave": {"values": ["dobby", "twill", "satin"], "priority": "HIGH"},
-        "gsm": {"max": 170, "priority": "HIGH"},
-        "yarn_exclude": ["carded"],
+    "Good Drape": {
+        "yarn": {"values": ["compact", "tfo", "combed", "slub"], "priority": "HIGH"},
+        "blend": {"values": ["viscose", "modal", "tencel", "giz"], "priority": "HIGH"},
+        "blend_exclude": ["100% cotton", "cotton:lycra", "cotton:linen", "cotton:lenin"],
+        "blend_allow": ["giz"],
+        "weave": {"values": ["satin", "twill", "dobby", "plain"], "priority": "HIGH"},
+        "gsm": {"max": 200, "priority": "HIGH"},
+        "yarn_exclude": [],
         "negative_cross": [],
     },
     "Shiny": {
         "yarn": {"values": ["compact", "tfo"], "priority": "HIGH"},
         "count": {"min": 30, "priority": "HIGH"},
-        "blend": {"values": ["cotton", "modal", "viscose", "tencel", "giza"], "priority": "HIGH"},
-        "blend_exclude": ["linen"],
-        "weave": {"values": ["twill", "satin", "dobby"], "priority": "HIGH"},
-        "finish": {"values": ["silky finish", "calendar", "calender", "eti"], "priority": "LOW"},
+        "blend": {"values": ["tencel", "viscose", "modal", "cotton"], "priority": "HIGH"},
+        "blend_exclude": ["linen", "lenin", "cotton:lycra"],
+        "weave": {"values": ["twill", "satin", "dobby", "plain"], "priority": "HIGH"},
+        "finish": {"values": ["calender", "calendar", "easy to iron"], "priority": "LOW"},
         "yarn_exclude": [],
         "negative_cross": [
-            {"blend": "100% cotton", "weave": ["plain", "dobby"]}
+            {"blend": "100% cotton", "weave": ["plain", "twill", "dobby", "satin"],
+             "weave_override": ["dobby-satin", "dobby*satin"],
+             "finish_override": ["anti microbial", "calender"]}
         ],
     },
-    "Crisp look": {
-        "blend": {"values": ["linen"], "exact_values": ["100% cotton"], "priority": "HIGH"},
+    "Crisp": {
+        "blend": {"values": ["linen", "lenin"], "exact_values": ["100% cotton"], "priority": "HIGH"},
         "weave": {"values": ["plain"], "priority": "LOW"},
         "yarn_exclude": [],
-        "negative_cross": [],
+        "negative_cross": [
+            {"blend": "100% cotton", "weave": ["twill", "satin", "dobby", "hbt"]}
+        ],
     },
     "Stretchable": {
-        "blend": {"values": ["lycra", "viscose", "cotton viscose", "modal"], "priority": "HIGH"},
-        "weave": {"values": ["plain", "dobby", "twill", "satin"], "priority": "LOW"},
+        "blend": {"values": ["lycra", "modal", "tencel", "viscose"], "priority": "HIGH"},
+        "weave": {"values": ["twill", "satin", "dobby", "plain"], "priority": "HIGH"},
         "yarn_exclude": [],
         "negative_cross": [],
     },
     "Easy Care": {
-        "yarn": {"values": ["compact", "carded", "slub", "tfo", "combed"], "priority": "LOW"},
-        "blend": {"values": ["viscose", "modal", "tencel", "cotton", "linen"], "priority": "LOW"},
-        "weave": {"values": ["plain", "dobby", "twill", "satin"], "priority": "LOW"},
-        "finish": {"values": ["eti", "resin", "csf"], "priority": "HIGH"},
+        "finish": {"values": ["easy to iron", "resin"], "priority": "HIGH"},
         "yarn_exclude": [],
         "negative_cross": [],
     },
     "Textured": {
-        "combo_mode": True,
-        "positive_combos": [
-            # High positive (score 2)
-            {"score": 2, "yarn": ["slub"], "weave": ["plain", "twill", "dobby", "satin", "hbt"]},
-            {"score": 2, "yarn": ["carded"], "weave": ["dobby"]},
-            {"score": 2, "blend": ["linen"], "weave": ["dobby", "plain", "twill"]},
-            # Medium positive (score 1)
-            {"score": 1, "yarn": ["carded"], "weave": ["plain", "twill"]},
-            {"score": 1, "weave": ["dobby"]},
-        ],
-        "finish_bonus": ["brushed"],
+        "weave": {"values": ["dobby", "twill", "plain"], "priority": "HIGH"},
+        "yarn_exclude": [],
+        "negative_cross": [],
     },
     "Dense": {
-        "weave": {"values": ["twill", "matt", "plain"], "priority": "LOW"},
-        "gsm": {"min": 170, "priority": "HIGH"},
+        "weave": {"values": ["matt", "twill", "plain", "dobby"], "priority": "HIGH"},
+        "gsm": {"min": 190, "priority": "HIGH"},
         "yarn_exclude": [],
         "negative_cross": [],
     },
-    "Lightweight": {
-        "gsm": {"max": 130, "priority": "HIGH"},
-        "yarn": {"values": ["compact", "combed"], "priority": "HIGH"},
-        "yarn_exclude": [],
-        "negative_cross": [],
-    },
-    "Breathable": {
-        "blend": {"values": ["cotton", "linen", "tencel"], "priority": "HIGH"},
-        "weave": {"values": ["plain"], "priority": "HIGH"},
-        "gsm": {"max": 160, "priority": "HIGH"},
-        "yarn_exclude": [],
-        "negative_cross": [],
-    },
-    "Premium Look": {
-        "count": {"min": 30, "priority": "HIGH"},
-        "blend": {"values": ["cotton", "modal", "viscose", "tencel", "giza"], "priority": "HIGH"},
-        "finish": {"values": ["soft touch", "brushed", "calendar", "calender", "eti"], "priority": "HIGH"},
+    "Anti Microbial": {
+        "finish": {"values": ["anti microbial"], "priority": "HIGH"},
         "yarn_exclude": [],
         "negative_cross": [],
     },
@@ -178,6 +165,23 @@ def contains_any(text, patterns):
         if pattern.lower() in text_lower:
             return True
     return False
+
+def get_blend_order_index(sample, standard_terms):
+    """Return the lowest blend-values index matched across all active rules.
+    Samples matching the first value in the list sort before those matching later values."""
+    best = float('inf')
+    for term in standard_terms:
+        rule = RULE_TABLE.get(term)
+        if not rule or "blend" not in rule:
+            continue
+        blend_values = rule["blend"].get("values", [])
+        sample_blend = sample["blend"].lower()
+        for idx, val in enumerate(blend_values):
+            if val.lower() in sample_blend:
+                if idx < best:
+                    best = idx
+                break
+    return best if best != float('inf') else 9999
 
 def find_standard_terms(feel_text):
     """Parse feel_terms text and return list of matched standard terms"""
@@ -266,15 +270,18 @@ def check_sample_against_rule(sample, standard_term):
         if contains_any(sample["yarn"], rule["yarn_exclude"]):
             return False, 0
 
-    # Check blend_exclude (always hard reject)
+    # Check blend_exclude (always hard reject, unless blend_allow overrides)
     if rule.get("blend_exclude"):
         if contains_any(sample["blend"], rule["blend_exclude"]):
-            return False, 0
+            if not contains_any(sample["blend"], rule.get("blend_allow", [])):
+                return False, 0
 
     # Check negative cross-attribute rules (always hard reject)
     for neg in rule.get("negative_cross", []):
         all_match = True
         for attr, condition in neg.items():
+            if attr.endswith("_override"):
+                continue
             sample_val = sample.get(attr, "")
             if isinstance(condition, list):
                 if not contains_any(sample_val, condition):
@@ -285,7 +292,17 @@ def check_sample_against_rule(sample, standard_term):
                     all_match = False
                     break
         if all_match:
-            return False, 0
+            # Check if an override cancels the rejection
+            overridden = False
+            for attr, condition in neg.items():
+                if attr.endswith("_override"):
+                    base_attr = attr.replace("_override", "")
+                    sample_val = sample.get(base_attr, "")
+                    if contains_any(sample_val, condition):
+                        overridden = True
+                        break
+            if not overridden:
+                return False, 0
 
     # Check each attribute with priority
     score = 0
@@ -371,8 +388,11 @@ def filter_samples(product_type, gsm_min, gsm_max, blend, weave, yarn, feel_term
                     filtered.append(s)
             results = filtered
 
-        # Sort by score descending — samples matching more LOW-priority conditions first
-        results.sort(key=lambda s: sample_scores.get(s["sample_no"], 0), reverse=True)
+        # Sort by blend-values order first, then by score descending
+        results.sort(key=lambda s: (
+            get_blend_order_index(s, standard_terms),
+            -sample_scores.get(s["sample_no"], 0)
+        ))
 
     if not has_filters:
         return [], standard_terms
@@ -696,13 +716,14 @@ HTML_TEMPLATE = """
                         <select id="product_type" name="product_type">
                             <option value="ALL">All Products</option>
                             <option value="DYED">DYED</option>
-                            <option value="SOLID">SOLID</option>
                             <option value="PRINT">PRINT</option>
                             <option value="CHECKS">CHECKS</option>
                             <option value="STRIPES">STRIPES</option>
+                            <option value="WHITE">WHITE</option>
                             <option value="YD+PRINT">YD+PRINT</option>
                             <option value="WHITE+PRINT">WHITE+PRINT</option>
                             <option value="DYED+PRINT">DYED+PRINT</option>
+                            <option value="YD+PIGMENT PRINT">YD+PIGMENT PRINT</option>
                         </select>
                     </div>
 
