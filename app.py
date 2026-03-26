@@ -1,10 +1,63 @@
+import os
 import re
-from flask import Flask, render_template_string, request, jsonify
+import httpx
+from flask import Flask, render_template_string, request, jsonify, send_from_directory, session, redirect, url_for
 
 app = Flask(__name__)
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", os.urandom(24).hex())
 
 # ============================================================================
-# SAMPLES DATABASE
+# SUPABASE CONFIGURATION
+# ============================================================================
+SUPABASE_URL = "https://gscxycvoeprxmkzfvnks.supabase.co"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdzY3h5Y3ZvZXByeG1remZ2bmtzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNjA0OTAsImV4cCI6MjA4OTkzNjQ5MH0.CVqLTwGfTCdA2EeSu2ayEv3ID4P68STHgm8XM0c-rus"
+
+_http = httpx.Client(timeout=30.0)
+
+def _sb_headers(extra=None):
+    h = {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}", "Content-Type": "application/json"}
+    if extra:
+        h.update(extra)
+    return h
+
+def sb_auth_signup(email, password):
+    r = _http.post(f"{SUPABASE_URL}/auth/v1/signup", json={"email": email, "password": password}, headers=_sb_headers())
+    if r.status_code >= 400:
+        data = r.json()
+        raise Exception(data.get("msg") or data.get("error_description") or data.get("message") or r.text)
+    return r.json()
+
+def sb_auth_signin(email, password):
+    r = _http.post(f"{SUPABASE_URL}/auth/v1/token?grant_type=password", json={"email": email, "password": password}, headers=_sb_headers())
+    if r.status_code >= 400:
+        data = r.json()
+        raise Exception(data.get("error_description") or data.get("msg") or data.get("message") or r.text)
+    return r.json()
+
+def sb_select(table, columns="*", filters=None, order=None, limit=None):
+    params = {"select": columns}
+    if order:
+        params["order"] = order
+    if limit:
+        params["limit"] = str(limit)
+    if filters:
+        params.update(filters)
+    r = _http.get(f"{SUPABASE_URL}/rest/v1/{table}", params=params, headers=_sb_headers())
+    r.raise_for_status()
+    return r.json()
+
+def sb_insert(table, data):
+    r = _http.post(f"{SUPABASE_URL}/rest/v1/{table}", json=data, headers=_sb_headers({"Prefer": "return=representation"}))
+    r.raise_for_status()
+    return r.json()
+
+def sb_delete(table, filters):
+    r = _http.delete(f"{SUPABASE_URL}/rest/v1/{table}", params=filters, headers=_sb_headers())
+    r.raise_for_status()
+
+# ============================================================================
+# SAMPLES SEED DATA
 # ============================================================================
 SAMPLES = [
     {"sample_no": 1001, "article": "SQUARE FLORAL", "product": "WHITE + PRINT", "yarn": "COMPACT", "count": "30*30", "count_avg": 30, "construction": "104*072", "construction_total": 176, "blend": "100% VISCOSE", "weave": "TWILL", "finish": "SOFT TOUCH", "gsm": 147},
@@ -59,6 +112,19 @@ SAMPLES = [
     {"sample_no": 1050, "article": "TS23FMFW", "product": "DYED + PRINT", "yarn": "COMPACT", "count": "60*60", "count_avg": 60, "construction": "180*104", "construction_total": 284, "blend": "100% COTTON", "weave": "SATIN", "finish": "SOFT FIN TOUCH", "gsm": 119},
 ]
 
+def seed_database():
+    """Seed the Supabase samples table if empty."""
+    try:
+        data = sb_select("samples", columns="sample_no", limit=1)
+        if not data:
+            sb_insert("samples", SAMPLES)
+    except Exception:
+        pass
+
+def get_all_samples():
+    """Get all samples from Supabase as list of dicts."""
+    return sb_select("samples", order="sample_no")
+
 # ============================================================================
 # FEEL TERMS DICTIONARY
 # ============================================================================
@@ -81,7 +147,7 @@ RULE_TABLE = {
     "Soft Feel": {
         "yarn": {"values": ["compact", "combed", "slub", "tfo"], "priority": "HIGH"},
         "count": {"min": 30, "priority": "HIGH"},
-        "blend": {"values": ["cotton", "modal", "viscose", "tencel", "giz"], "priority": "HIGH"},
+        "blend": {"values": ["modal", "tencel", "viscose", "giz", "cotton"], "pure_first": True, "priority": "HIGH"},
         "blend_exclude": ["linen", "lenin"],
         "finish": {"values": ["soft touch", "brushed", "peach fin hand", "normal soft fin", "soft fin touch", "cotton soft fin", "chemical soft fin", "calender", "easy to iron", "anti microbial"], "priority": "HIGH"},
         "yarn_exclude": [],
@@ -91,7 +157,7 @@ RULE_TABLE = {
     },
     "Good Drape": {
         "yarn": {"values": ["compact", "tfo", "combed", "slub"], "priority": "HIGH"},
-        "blend": {"values": ["viscose", "modal", "tencel", "giz"], "priority": "HIGH"},
+        "blend": {"values": ["viscose", "tencel", "modal", "giz"], "pure_first": True, "priority": "HIGH"},
         "blend_exclude": ["100% cotton", "cotton:lycra", "cotton:linen", "cotton:lenin"],
         "blend_allow": ["giz"],
         "weave": {"values": ["satin", "twill", "dobby", "plain"], "priority": "HIGH"},
@@ -102,7 +168,7 @@ RULE_TABLE = {
     "Shiny": {
         "yarn": {"values": ["compact", "tfo"], "priority": "HIGH"},
         "count": {"min": 30, "priority": "HIGH"},
-        "blend": {"values": ["tencel", "viscose", "modal", "cotton"], "priority": "HIGH"},
+        "blend": {"values": ["tencel", "viscose", "modal", "giz", "cotton"], "pure_first": True, "priority": "HIGH"},
         "blend_exclude": ["linen", "lenin", "cotton:lycra"],
         "weave": {"values": ["twill", "satin", "dobby", "plain"], "priority": "HIGH"},
         "finish": {"values": ["calender", "calendar", "easy to iron"], "priority": "LOW"},
@@ -114,7 +180,7 @@ RULE_TABLE = {
         ],
     },
     "Crisp": {
-        "blend": {"values": ["linen", "lenin"], "exact_values": ["100% cotton"], "priority": "HIGH"},
+        "blend": {"values": ["linen", "lenin", "cotton"], "priority": "HIGH"},
         "weave": {"values": ["plain"], "priority": "LOW"},
         "yarn_exclude": [],
         "negative_cross": [
@@ -182,6 +248,50 @@ def get_blend_order_index(sample, standard_terms):
                     best = idx
                 break
     return best if best != float('inf') else 9999
+
+def calculate_priority_score(sample, standard_terms):
+    """Calculate priority ranking score based on BLEND only.
+    Follows the exact sequence in the rule table's blend values list.
+    Pure 100% fiber ranks above mixed blends of the same fiber.
+    Higher score = better match."""
+    total_score = 0
+
+    for term in standard_terms:
+        rule = RULE_TABLE.get(term)
+        if not rule:
+            continue
+
+        if "blend" not in rule or not isinstance(rule["blend"], dict):
+            continue
+
+        blend_values = rule["blend"].get("values", [])
+        sample_blend = sample["blend"].lower().strip()
+        max_positions = len(blend_values)
+
+        # Find the highest-priority fiber that matches
+        best_fiber_idx = None
+        for idx, val in enumerate(blend_values):
+            if val.lower() in sample_blend:
+                best_fiber_idx = idx
+                break
+
+        if best_fiber_idx is not None:
+            # Earlier position in list = higher score
+            fiber_score = (max_positions - best_fiber_idx) * 1000
+
+            # Pure/100% blend bonus: 100% of a fiber ranks above mixed
+            is_pure = ("100%" in sample_blend) and (":" not in sample_blend) and ("/" not in sample_blend)
+            if is_pure:
+                # If pure_first flag is set, use large bonus so ALL pure blends
+                # rank above ALL mixed blends regardless of fiber position
+                if rule["blend"].get("pure_first", False):
+                    fiber_score += (max_positions + 1) * 1000
+                else:
+                    fiber_score += 500
+
+            total_score += fiber_score
+
+    return total_score
 
 def find_standard_terms(feel_text):
     """Parse feel_terms text and return list of matched standard terms"""
@@ -330,7 +440,7 @@ def check_sample_against_rule(sample, standard_term):
 
 def filter_samples(product_type, gsm_min, gsm_max, blend, weave, yarn, feel_terms):
     """Apply all filters and return matching samples"""
-    results = list(SAMPLES)
+    results = get_all_samples()
 
     has_filters = (
         (product_type and product_type.upper() != "ALL") or
@@ -376,23 +486,26 @@ def filter_samples(product_type, gsm_min, gsm_max, blend, weave, yarn, feel_term
         return [], standard_terms
 
     if standard_terms:
-        # Track cumulative LOW-priority scores per sample
-        sample_scores = {s["sample_no"]: 0 for s in results}
-
         for standard_term in standard_terms:
             filtered = []
             for s in results:
                 passes, score = check_sample_against_rule(s, standard_term)
                 if passes:
-                    sample_scores[s["sample_no"]] = sample_scores.get(s["sample_no"], 0) + score
                     filtered.append(s)
             results = filtered
 
-        # Sort by blend-values order first, then by score descending
-        results.sort(key=lambda s: (
-            get_blend_order_index(s, standard_terms),
-            -sample_scores.get(s["sample_no"], 0)
-        ))
+        # Calculate priority scores and sort best match first
+        scored_results = []
+        for s in results:
+            s_copy = dict(s)
+            s_copy["priority_score"] = calculate_priority_score(s, standard_terms)
+            scored_results.append(s_copy)
+        scored_results.sort(key=lambda s: -s["priority_score"])
+
+        # Add recommendation rank
+        for idx, s in enumerate(scored_results):
+            s["rank"] = idx + 1
+        results = scored_results
 
     if not has_filters:
         return [], standard_terms
@@ -403,11 +516,91 @@ def filter_samples(product_type, gsm_min, gsm_max, blend, weave, yarn, feel_term
 # FLASK ROUTES
 # ============================================================================
 
+IMAGES_DIR = os.path.join(BASE_DIR, "SAMPLE IMAGES")
+
+def login_required(f):
+    """Simple login check decorator."""
+    from functools import wraps
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if "user_id" not in session:
+            return redirect(url_for("login"))
+        return f(*args, **kwargs)
+    return decorated
+
+@app.route("/sample-image/<int:sample_no>")
+def sample_image(sample_no):
+    filename = f"{sample_no}.jpeg"
+    local_path = os.path.join(IMAGES_DIR, filename)
+    if os.path.exists(local_path):
+        return send_from_directory(IMAGES_DIR, filename)
+    return redirect(f"{SUPABASE_URL}/storage/v1/object/public/Neha/{filename}")
+
 @app.route("/")
 def index():
-    return render_template_string(HTML_TEMPLATE)
+    if "user_id" in session:
+        return redirect(url_for("dashboard"))
+    return redirect(url_for("login"))
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        email = request.form.get("email", "").strip()
+        password = request.form.get("password", "")
+        try:
+            result = sb_auth_signin(email, password)
+            session["user_id"] = result["user"]["id"]
+            session["username"] = result["user"]["email"]
+            return redirect(url_for("dashboard"))
+        except Exception:
+            return render_template_string(LOGIN_TEMPLATE, error="Invalid email or password")
+    return render_template_string(LOGIN_TEMPLATE, error=None)
+
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    if request.method == "POST":
+        email = request.form.get("email", "").strip()
+        password = request.form.get("password", "")
+        confirm = request.form.get("confirm", "")
+        if not email or not password:
+            return render_template_string(REGISTER_TEMPLATE, error="Email and password are required")
+        if password != confirm:
+            return render_template_string(REGISTER_TEMPLATE, error="Passwords do not match")
+        if len(password) < 6:
+            return render_template_string(REGISTER_TEMPLATE, error="Password must be at least 6 characters")
+        try:
+            result = sb_auth_signup(email, password)
+            user = result.get("user")
+            if user and user.get("id"):
+                session["user_id"] = user["id"]
+                session["username"] = user.get("email", email)
+                return redirect(url_for("dashboard"))
+            return render_template_string(REGISTER_TEMPLATE, error="Registration failed")
+        except Exception as e:
+            msg = str(e)
+            if "already" in msg.lower():
+                return render_template_string(REGISTER_TEMPLATE, error="Email already registered")
+            return render_template_string(REGISTER_TEMPLATE, error=f"Error: {msg}")
+    return render_template_string(REGISTER_TEMPLATE, error=None)
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
+
+@app.route("/dashboard")
+@login_required
+def dashboard():
+    return render_template_string(DASHBOARD_TEMPLATE, username=session.get("username", ""))
+
+@app.route("/api/samples")
+@login_required
+def api_all_samples():
+    samples = get_all_samples()
+    return jsonify({"samples": samples, "total_count": len(samples)})
 
 @app.route("/search", methods=["POST"])
+@login_required
 def search():
     product_type = request.form.get("product_type", "ALL")
     gsm_min = request.form.get("gsm_min", "").strip()
@@ -425,456 +618,1166 @@ def search():
         "total_count": len(results),
     })
 
+@app.route("/api/wishlist")
+@login_required
+def get_wishlist():
+    user_id = session["user_id"]
+    groups = sb_select("wishlist_groups", filters={"user_id": f"eq.{user_id}"}, order="name")
+    result = []
+    all_sample_nos = []
+    for g in groups:
+        items = sb_select("wishlists", columns="sample_no", filters={"user_id": f"eq.{user_id}", "group_id": f"eq.{g['id']}"})
+        sample_nos = [item["sample_no"] for item in items]
+        all_sample_nos.extend(sample_nos)
+        if sample_nos:
+            in_list = ",".join(str(n) for n in sample_nos)
+            samples = sb_select("samples", filters={"sample_no": f"in.({in_list})"})
+        else:
+            samples = []
+        result.append({"group_id": g["id"], "group_name": g["name"], "samples": samples, "count": len(samples)})
+    return jsonify({"groups": result, "all_sample_nos": all_sample_nos, "total_count": len(all_sample_nos)})
+
+@app.route("/api/wishlist/groups", methods=["GET"])
+@login_required
+def get_wishlist_groups():
+    user_id = session["user_id"]
+    groups = sb_select("wishlist_groups", columns="id,name", filters={"user_id": f"eq.{user_id}"}, order="name")
+    return jsonify({"groups": groups})
+
+@app.route("/api/wishlist/groups/create", methods=["POST"])
+@login_required
+def create_wishlist_group():
+    data = request.get_json()
+    name = data.get("name", "").strip()
+    if not name:
+        return jsonify({"error": "Group name is required"}), 400
+    user_id = session["user_id"]
+    existing = sb_select("wishlist_groups", columns="id", filters={"user_id": f"eq.{user_id}", "name": f"eq.{name}"})
+    if existing:
+        return jsonify({"error": "Group already exists"}), 400
+    result = sb_insert("wishlist_groups", {"user_id": user_id, "name": name})
+    group = result[0]
+    return jsonify({"status": "created", "group_id": group["id"], "name": group["name"]})
+
+@app.route("/api/wishlist/groups/delete", methods=["POST"])
+@login_required
+def delete_wishlist_group():
+    data = request.get_json()
+    group_id = data.get("group_id")
+    user_id = session["user_id"]
+    group = sb_select("wishlist_groups", columns="id", filters={"id": f"eq.{group_id}", "user_id": f"eq.{user_id}"})
+    if not group:
+        return jsonify({"error": "Group not found"}), 404
+    sb_delete("wishlists", {"user_id": f"eq.{user_id}", "group_id": f"eq.{group_id}"})
+    sb_delete("wishlist_groups", {"id": f"eq.{group_id}", "user_id": f"eq.{user_id}"})
+    return jsonify({"status": "deleted"})
+
+@app.route("/api/wishlist/add", methods=["POST"])
+@login_required
+def add_to_wishlist():
+    data = request.get_json()
+    sample_no = data.get("sample_no")
+    group_id = data.get("group_id")
+    if not sample_no or not group_id:
+        return jsonify({"error": "sample_no and group_id required"}), 400
+    user_id = session["user_id"]
+    group = sb_select("wishlist_groups", columns="id", filters={"id": f"eq.{group_id}", "user_id": f"eq.{user_id}"})
+    if not group:
+        return jsonify({"error": "Group not found"}), 404
+    existing = sb_select("wishlists", columns="id", filters={"user_id": f"eq.{user_id}", "group_id": f"eq.{group_id}", "sample_no": f"eq.{sample_no}"})
+    if not existing:
+        sb_insert("wishlists", {"user_id": user_id, "group_id": group_id, "sample_no": sample_no})
+    return jsonify({"status": "added", "sample_no": sample_no})
+
+@app.route("/api/wishlist/remove", methods=["POST"])
+@login_required
+def remove_from_wishlist():
+    data = request.get_json()
+    sample_no = data.get("sample_no")
+    group_id = data.get("group_id")
+    if not sample_no or not group_id:
+        return jsonify({"error": "sample_no and group_id required"}), 400
+    user_id = session["user_id"]
+    sb_delete("wishlists", {"user_id": f"eq.{user_id}", "group_id": f"eq.{group_id}", "sample_no": f"eq.{sample_no}"})
+    return jsonify({"status": "removed", "sample_no": sample_no})
+
 # ============================================================================
-# HTML TEMPLATE
+# HTML TEMPLATES
 # ============================================================================
 
-HTML_TEMPLATE = """
+_AUTH_STYLES = """
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+        background: linear-gradient(135deg, #0f1923 0%, #1a2740 40%, #2d4a7a 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .auth-container {
+        width: 100%; max-width: 420px; padding: 1rem;
+    }
+    .auth-logo {
+        text-align: center; margin-bottom: 2rem; color: white;
+    }
+    .auth-logo h1 { font-size: 1.8rem; letter-spacing: -0.5px; margin-bottom: 0.3rem; }
+    .auth-logo p { opacity: 0.7; font-size: 0.95rem; }
+    .auth-card {
+        background: white;
+        border-radius: 16px;
+        padding: 2.5rem 2rem;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    .auth-card h2 { color: #1a2740; margin-bottom: 1.5rem; font-size: 1.4rem; text-align: center; }
+    .auth-field { margin-bottom: 1.2rem; }
+    .auth-field label {
+        display: block; font-weight: 600; color: #1a2740;
+        font-size: 0.85rem; margin-bottom: 0.4rem;
+    }
+    .auth-field input {
+        width: 100%;
+        padding: 0.8rem 1rem;
+        border: 1.5px solid #dde1e6;
+        border-radius: 10px;
+        font-size: 1rem;
+        font-family: inherit;
+        transition: border-color 0.25s, box-shadow 0.25s;
+        background: #fafbfc;
+    }
+    .auth-field input:focus {
+        outline: none; border-color: #0097a7;
+        box-shadow: 0 0 0 3px rgba(0,151,167,0.12);
+        background: white;
+    }
+    .auth-btn {
+        width: 100%;
+        padding: 0.85rem;
+        background: linear-gradient(135deg, #0097a7, #00838f);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.25s;
+        margin-top: 0.5rem;
+    }
+    .auth-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,151,167,0.4); }
+    .auth-error {
+        background: #fff0f0;
+        border: 1px solid #ffcdd2;
+        color: #c62828;
+        padding: 0.7rem 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        font-size: 0.9rem;
+        text-align: center;
+    }
+    .auth-link {
+        text-align: center; margin-top: 1.5rem; font-size: 0.9rem; color: #666;
+    }
+    .auth-link a { color: #0097a7; text-decoration: none; font-weight: 600; }
+    .auth-link a:hover { text-decoration: underline; }
+</style>
+"""
+
+LOGIN_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fabric Sample Selection Tool</title>
+    <title>Sign In - Fabric Sample Tool</title>
+    """ + _AUTH_STYLES + """
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-logo">
+            <h1>Fabric Sample Tool</h1>
+            <p>Smart Search by Buyer Requirements</p>
+        </div>
+        <div class="auth-card">
+            <h2>Sign In</h2>
+            {% if error %}
+            <div class="auth-error">{{ error }}</div>
+            {% endif %}
+            <form method="POST">
+                <div class="auth-field">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" placeholder="Enter your email" required autofocus>
+                </div>
+                <div class="auth-field">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" placeholder="Enter your password" required>
+                </div>
+                <button type="submit" class="auth-btn">Sign In</button>
+            </form>
+            <div class="auth-link">
+                Don't have an account? <a href="/register">Create one</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+"""
+
+REGISTER_TEMPLATE = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - Fabric Sample Tool</title>
+    """ + _AUTH_STYLES + """
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-logo">
+            <h1>Fabric Sample Tool</h1>
+            <p>Create your account</p>
+        </div>
+        <div class="auth-card">
+            <h2>Register</h2>
+            {% if error %}
+            <div class="auth-error">{{ error }}</div>
+            {% endif %}
+            <form method="POST">
+                <div class="auth-field">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" placeholder="Enter your email" required autofocus>
+                </div>
+                <div class="auth-field">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" placeholder="Create a password" required>
+                </div>
+                <div class="auth-field">
+                    <label for="confirm">Confirm Password</label>
+                    <input type="password" id="confirm" name="confirm" placeholder="Confirm your password" required>
+                </div>
+                <button type="submit" class="auth-btn">Create Account</button>
+            </form>
+            <div class="auth-link">
+                Already have an account? <a href="/login">Sign in</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+"""
+
+DASHBOARD_TEMPLATE = r"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Fabric Sample Tool</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background-color: #f5f5f5;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            background-color: #f0f2f5;
             color: #333;
             line-height: 1.6;
         }
 
+        /* ---- HEADER (sticky) ---- */
         .header {
-            background-color: #1a2740;
+            background: linear-gradient(135deg, #1a2740 0%, #2d4a7a 100%);
             color: white;
-            padding: 2rem 1rem;
-            text-align: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 1.2rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            position: sticky;
+            top: 0;
+            z-index: 200;
+        }
+        .header-left h1 { font-size: 1.5rem; letter-spacing: -0.5px; }
+        .header-left p { font-size: 0.85rem; opacity: 0.7; }
+        .header-right { display: flex; align-items: center; gap: 1rem; }
+        .header-user {
+            display: flex; align-items: center; gap: 0.6rem;
+            background: rgba(255,255,255,0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 10px;
+        }
+        .header-avatar {
+            width: 34px; height: 34px;
+            background: linear-gradient(135deg, #0097a7, #00bcd4);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 0.9rem; color: white;
+        }
+        .header-username { font-weight: 600; font-size: 0.95rem; }
+        .btn-logout {
+            padding: 0.5rem 1.2rem;
+            background: rgba(255,255,255,0.15);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.25);
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.25s;
+        }
+        .btn-logout:hover { background: rgba(255,255,255,0.25); }
+
+        /* ---- SIDEBAR (sticky) ---- */
+        .app-layout { display: flex; min-height: calc(100vh - 70px); }
+
+        .sidebar {
+            width: 240px;
+            background: white;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.06);
+            padding: 1.5rem 0;
+            flex-shrink: 0;
+            position: sticky;
+            top: 70px;
+            height: calc(100vh - 70px);
+            overflow-y: auto;
+        }
+        .sidebar-label {
+            padding: 0 1.5rem;
+            font-size: 0.7rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 1px;
+            color: #999; margin-bottom: 0.8rem;
+        }
+        .nav-item {
+            display: flex; align-items: center; gap: 0.8rem;
+            padding: 0.8rem 1.5rem;
+            color: #555; font-weight: 500; font-size: 0.95rem;
+            cursor: pointer; transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+        .nav-item:hover { background: #f5fafa; color: #0097a7; }
+        .nav-item.active {
+            background: #e0f7fa; color: #0097a7;
+            border-left-color: #0097a7; font-weight: 600;
+        }
+        .nav-icon { font-size: 1.2rem; width: 24px; text-align: center; }
+        .nav-badge {
+            margin-left: auto;
+            background: #0097a7; color: white;
+            font-size: 0.7rem; padding: 0.15rem 0.5rem;
+            border-radius: 10px; font-weight: 600;
         }
 
-        .header h1 {
-            font-size: 2.5rem;
-            margin-bottom: 0.5rem;
+        @media (max-width: 768px) {
+            .sidebar { width: 60px; }
+            .nav-item span:not(.nav-icon) { display: none; }
+            .nav-badge { display: none; }
+            .sidebar-label { display: none; }
+            .nav-item { justify-content: center; padding: 0.8rem; }
         }
 
-        .header p {
-            font-size: 1.1rem;
-            opacity: 0.9;
-        }
-
-        .container {
-            max-width: 900px;
-            margin: 2rem auto;
-            padding: 0 1rem;
-        }
+        /* ---- MAIN CONTENT ---- */
+        .main-content { flex: 1; padding: 2rem; overflow-y: auto; }
+        .page-section { display: none; }
+        .page-section.active { display: block; }
+        .container { max-width: 1100px; margin: 0 auto; }
 
         .card {
-            background: white;
-            border-radius: 8px;
-            padding: 2rem;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            background: white; border-radius: 12px;
+            padding: 2rem; box-shadow: 0 2px 12px rgba(0,0,0,0.08);
             margin-bottom: 2rem;
         }
 
+        /* ---- FORM ---- */
         .form-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1.5rem;
-            margin-bottom: 1.5rem;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 1.25rem; margin-bottom: 1.25rem;
+        }
+        @media (max-width: 900px) { .form-grid { grid-template-columns: 1fr 1fr; } }
+        @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
+
+        .form-group { display: flex; flex-direction: column; }
+        .form-group.full-width { grid-column: 1 / -1; }
+
+        label { font-weight: 600; margin-bottom: 0.4rem; color: #1a2740; font-size: 0.9rem; }
+
+        input[type="text"], input[type="number"], select {
+            padding: 0.7rem 0.9rem;
+            border: 1.5px solid #dde1e6; border-radius: 8px;
+            font-size: 0.95rem; font-family: inherit;
+            transition: border-color 0.25s, box-shadow 0.25s;
+            background: #fafbfc;
+        }
+        input:focus, select:focus {
+            outline: none; border-color: #0097a7;
+            box-shadow: 0 0 0 3px rgba(0,151,167,0.12); background: white;
         }
 
-        @media (max-width: 600px) {
-            .form-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
-        }
-
-        label {
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            color: #1a2740;
-            font-size: 0.95rem;
-        }
-
-        input[type="text"],
-        input[type="number"],
-        select {
-            padding: 0.75rem;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 1rem;
-            font-family: inherit;
-            transition: border-color 0.3s;
-        }
-
-        input[type="text"]:focus,
-        input[type="number"]:focus,
-        select:focus {
-            outline: none;
-            border-color: #0097a7;
-            box-shadow: 0 0 0 2px rgba(0, 151, 167, 0.1);
-        }
-
-        .button-group {
-            display: flex;
-            gap: 1rem;
-            justify-content: flex-end;
-            margin-top: 1.5rem;
-        }
+        .button-group { display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem; }
 
         button {
-            padding: 0.75rem 1.5rem;
-            font-size: 1rem;
-            font-weight: 600;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.3s;
+            padding: 0.7rem 1.5rem; font-size: 0.95rem; font-weight: 600;
+            border: none; border-radius: 8px; cursor: pointer;
+            transition: all 0.25s;
         }
+        .btn-search { background: linear-gradient(135deg, #0097a7, #00838f); color: white; }
+        .btn-search:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,151,167,0.35); }
+        .btn-reset { background: #f0f0f0; color: #555; }
+        .btn-reset:hover { background: #e0e0e0; }
 
-        .btn-search {
-            background-color: #0097a7;
-            color: white;
-        }
-
-        .btn-search:hover {
-            background-color: #00838f;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 151, 167, 0.3);
-        }
-
-        .btn-reset {
-            background-color: #f0f0f0;
-            color: #333;
-        }
-
-        .btn-reset:hover {
-            background-color: #e0e0e0;
-        }
-
-        .results-section {
-            display: none;
-        }
-
-        .results-section.show {
-            display: block;
-        }
-
+        /* ---- RESULTS ---- */
+        .results-section { display: none; }
+        .results-section.show { display: block; }
         .results-info {
-            background: #e8f5e9;
+            background: linear-gradient(135deg, #e8f5e9, #f1f8e9);
             border-left: 4px solid #4caf50;
-            padding: 1rem;
-            margin-bottom: 1.5rem;
-            border-radius: 4px;
+            padding: 1rem 1.25rem; margin-bottom: 1.5rem; border-radius: 8px;
         }
-
-        .results-info h3 {
-            color: #2e7d32;
-            margin-bottom: 0.5rem;
-        }
-
-        .results-info p {
-            color: #556b2f;
-            font-size: 0.95rem;
-        }
-
-        .no-results {
-            text-align: center;
-            padding: 3rem 1rem;
-            color: #999;
-        }
-
-        .no-results p {
-            font-size: 1.2rem;
-            font-weight: 500;
-        }
-
-        .table-wrapper {
-            overflow-x: auto;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 1rem;
-        }
-
-        th {
-            background-color: #1a2740;
-            color: white;
-            padding: 1rem;
-            text-align: left;
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-
-        td {
-            padding: 0.75rem 1rem;
-            border-bottom: 1px solid #eee;
-            font-size: 0.9rem;
-        }
-
-        tr:hover {
-            background-color: #f9f9f9;
-        }
-
-        tr:nth-child(even) {
-            background-color: #f5f5f5;
-        }
-
-        tr:nth-child(even):hover {
-            background-color: #efefef;
-        }
-
-        .sample-no {
-            font-weight: 600;
-            color: #0097a7;
-        }
-
-        .loading {
-            display: none;
-            text-align: center;
-            padding: 2rem;
-            color: #0097a7;
-        }
-
-        .loading.show {
-            display: block;
-        }
-
-        .spinner {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #0097a7;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 1rem;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-            margin-top: 0.5rem;
-        }
-
+        .results-info h3 { color: #2e7d32; margin-bottom: 0.3rem; }
+        .results-info p { color: #556b2f; font-size: 0.9rem; }
+        .tags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem; }
         .tag {
-            background-color: #e0f2f1;
-            color: #00796b;
-            padding: 0.25rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 500;
+            background: #e0f2f1; color: #00796b;
+            padding: 0.2rem 0.7rem; border-radius: 20px;
+            font-size: 0.82rem; font-weight: 500;
         }
+
+        /* ---- SAMPLE CARDS ---- */
+        .samples-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+            gap: 1.5rem;
+        }
+        .sample-card {
+            background: white; border-radius: 12px; overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            transition: transform 0.25s, box-shadow 0.25s;
+            position: relative; cursor: pointer;
+        }
+        .sample-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.14);
+        }
+        .sample-card-img {
+            width: 100%; height: 200px;
+            object-fit: cover; display: block; background: #eee;
+        }
+        .sample-card-body { padding: 1rem 1.1rem 1.1rem; }
+        .sample-card-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 0.6rem;
+        }
+        .sample-card-no { font-weight: 700; font-size: 1rem; color: #0097a7; }
+        .sample-card-article { font-size: 0.82rem; color: #888; font-weight: 500; }
+        .sample-card-props {
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 0.3rem 0.8rem;
+        }
+        .sample-prop { font-size: 0.8rem; }
+        .sample-prop-label {
+            color: #999; font-weight: 600;
+            text-transform: uppercase; font-size: 0.68rem; letter-spacing: 0.5px;
+        }
+        .sample-prop-value { color: #333; font-weight: 500; }
+
+        /* ---- RANK BADGE ---- */
+        .rank-badge {
+            position: absolute; top: 10px; left: 10px;
+            padding: 0.25rem 0.6rem; border-radius: 8px;
+            font-weight: 700; font-size: 0.78rem; z-index: 2;
+            backdrop-filter: blur(4px);
+        }
+        .rank-top { background: rgba(76,175,80,0.92); color: white; }
+        .rank-mid { background: rgba(255,152,0,0.92); color: white; }
+        .rank-normal { background: rgba(255,255,255,0.9); color: #555; }
+        .rank-label {
+            position: absolute; top: 38px; left: 10px;
+            font-size: 0.62rem; color: white;
+            background: rgba(0,0,0,0.45);
+            padding: 0.1rem 0.45rem; border-radius: 4px; z-index: 2;
+        }
+
+        /* ---- PAGE HEADER ---- */
+        .page-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;
+        }
+        .page-header h2 { color: #1a2740; font-size: 1.4rem; }
+        .count-badge {
+            background: #e3f2fd; color: #1565c0;
+            padding: 0.35rem 1rem; border-radius: 20px;
+            font-weight: 600; font-size: 0.85rem;
+        }
+
+        /* ---- EMPTY STATE ---- */
+        .empty-state { text-align: center; padding: 4rem 2rem; color: #999; }
+        .empty-state .empty-icon { font-size: 3rem; margin-bottom: 1rem; }
+        .empty-state p { font-size: 1.1rem; font-weight: 500; }
+        .empty-state .sub { font-size: 0.9rem; margin-top: 0.5rem; font-weight: 400; }
+
+        /* ---- LOADING ---- */
+        .loading { display: none; text-align: center; padding: 3rem; color: #0097a7; }
+        .loading.show { display: block; }
+        .spinner {
+            border: 3px solid #e0e0e0; border-top: 3px solid #0097a7;
+            border-radius: 50%; width: 36px; height: 36px;
+            animation: spin 0.8s linear infinite; margin: 0 auto 1rem;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .no-results { text-align: center; padding: 3rem 1rem; color: #999; }
+        .no-results p { font-size: 1.1rem; font-weight: 500; }
 
         .error-message {
-            background: #ffebee;
-            border-left: 4px solid #f44336;
-            padding: 1rem;
-            margin-bottom: 1.5rem;
-            border-radius: 4px;
-            color: #c62828;
-            display: none;
+            background: #ffebee; border-left: 4px solid #f44336;
+            padding: 1rem; margin-bottom: 1.5rem; border-radius: 8px;
+            color: #c62828; display: none;
         }
+        .error-message.show { display: block; }
 
-        .error-message.show {
-            display: block;
+        /* ---- WISHLIST GROUPS ---- */
+        .group-bar {
+            display: flex; gap: 0.8rem; align-items: center;
+            margin-bottom: 1.5rem; flex-wrap: wrap;
         }
+        .group-chip {
+            padding: 0.5rem 1.2rem;
+            border-radius: 20px; font-size: 0.9rem; font-weight: 600;
+            cursor: pointer; border: 2px solid #dde1e6;
+            background: white; color: #555; transition: all 0.25s;
+            display: flex; align-items: center; gap: 0.4rem;
+        }
+        .group-chip:hover { border-color: #0097a7; color: #0097a7; }
+        .group-chip.active { background: #0097a7; color: white; border-color: #0097a7; }
+        .group-chip .delete-group {
+            font-size: 0.8rem; margin-left: 0.3rem; opacity: 0.6;
+            cursor: pointer;
+        }
+        .group-chip .delete-group:hover { opacity: 1; }
+        .add-group-btn {
+            padding: 0.5rem 1rem; border-radius: 20px;
+            font-size: 0.85rem; font-weight: 600;
+            cursor: pointer; border: 2px dashed #bbb;
+            background: transparent; color: #888;
+            transition: all 0.25s;
+        }
+        .add-group-btn:hover { border-color: #0097a7; color: #0097a7; }
+
+        /* ---- MODAL ---- */
+        .modal-overlay {
+            display: none;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); z-index: 500;
+            align-items: center; justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+        .modal-overlay.show { display: flex; }
+
+        .modal-box {
+            background: white; border-radius: 16px;
+            max-width: 700px; width: 90%; max-height: 90vh;
+            overflow-y: auto; box-shadow: 0 24px 80px rgba(0,0,0,0.3);
+            position: relative;
+        }
+        .modal-close {
+            position: absolute; top: 12px; right: 16px;
+            background: rgba(0,0,0,0.5); color: white;
+            border: none; border-radius: 50%; width: 36px; height: 36px;
+            font-size: 1.3rem; cursor: pointer; z-index: 510;
+            display: flex; align-items: center; justify-content: center;
+            transition: background 0.2s;
+        }
+        .modal-close:hover { background: rgba(0,0,0,0.8); }
+        .modal-img {
+            width: 100%; height: 350px;
+            object-fit: cover; display: block; border-radius: 16px 16px 0 0;
+        }
+        .modal-body { padding: 1.5rem 2rem 2rem; }
+        .modal-title {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 1.2rem;
+        }
+        .modal-title h2 { color: #0097a7; font-size: 1.3rem; }
+        .modal-title span { color: #888; font-size: 0.9rem; font-weight: 500; }
+        .modal-props {
+            display: grid; grid-template-columns: 1fr 1fr 1fr;
+            gap: 1rem; margin-bottom: 1.5rem;
+        }
+        @media (max-width: 500px) { .modal-props { grid-template-columns: 1fr 1fr; } }
+        .modal-prop { }
+        .modal-prop-label {
+            color: #999; font-weight: 700;
+            text-transform: uppercase; font-size: 0.72rem; letter-spacing: 0.5px;
+        }
+        .modal-prop-value { color: #333; font-weight: 600; font-size: 1rem; }
+        .modal-wishlist-bar {
+            display: flex; gap: 0.8rem; align-items: center;
+            padding-top: 1rem; border-top: 1px solid #eee;
+        }
+        .modal-wishlist-bar select {
+            flex: 1; padding: 0.7rem 0.9rem;
+            border: 1.5px solid #dde1e6; border-radius: 8px;
+            font-size: 0.95rem; font-family: inherit;
+            background: #fafbfc;
+        }
+        .modal-wishlist-bar select:focus {
+            outline: none; border-color: #0097a7;
+        }
+        .btn-add-wish {
+            padding: 0.7rem 1.5rem;
+            background: linear-gradient(135deg, #ff5252, #f44336);
+            color: white; border: none; border-radius: 8px;
+            font-size: 0.9rem; font-weight: 600; cursor: pointer;
+            white-space: nowrap; transition: all 0.25s;
+        }
+        .btn-add-wish:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(244,67,54,0.35); }
+        .modal-msg {
+            margin-top: 0.7rem; font-size: 0.85rem; color: #4caf50;
+            font-weight: 500; display: none;
+        }
+        .modal-msg.show { display: block; }
+
+        /* ---- NEW GROUP MODAL ---- */
+        .group-modal-overlay {
+            display: none;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 600;
+            align-items: center; justify-content: center;
+        }
+        .group-modal-overlay.show { display: flex; }
+        .group-modal-box {
+            background: white; border-radius: 14px;
+            padding: 2rem; width: 90%; max-width: 400px;
+            box-shadow: 0 16px 48px rgba(0,0,0,0.25);
+        }
+        .group-modal-box h3 { color: #1a2740; margin-bottom: 1rem; }
+        .group-modal-box input {
+            width: 100%; padding: 0.8rem 1rem;
+            border: 1.5px solid #dde1e6; border-radius: 10px;
+            font-size: 1rem; font-family: inherit; margin-bottom: 1rem;
+        }
+        .group-modal-box input:focus {
+            outline: none; border-color: #0097a7;
+            box-shadow: 0 0 0 3px rgba(0,151,167,0.12);
+        }
+        .group-modal-actions { display: flex; gap: 0.8rem; justify-content: flex-end; }
+        .group-modal-actions button { padding: 0.6rem 1.3rem; border-radius: 8px; font-size: 0.9rem; font-weight: 600; }
+        .btn-cancel-group { background: #f0f0f0; color: #555; border: none; cursor: pointer; }
+        .btn-save-group { background: linear-gradient(135deg,#0097a7,#00838f); color: white; border: none; cursor: pointer; }
+        .btn-save-group:hover { transform: translateY(-1px); }
     </style>
 </head>
 <body>
+    <!-- ======= HEADER ======= -->
     <div class="header">
-        <h1>Fabric Sample Selection Tool</h1>
-        <p>Smart Search by Buyer Requirements</p>
+        <div class="header-left">
+            <h1>Fabric Sample Tool</h1>
+            <p>Dashboard</p>
+        </div>
+        <div class="header-right">
+            <div class="header-user">
+                <div class="header-avatar">{{ username[0]|upper }}</div>
+                <span class="header-username">{{ username }}</span>
+            </div>
+            <a href="/logout" class="btn-logout">Sign Out</a>
+        </div>
     </div>
 
-    <div class="container">
-        <div class="card">
-            <h2 style="margin-bottom: 1.5rem; color: #1a2740;">Search Fabric Samples</h2>
-
-            <form id="searchForm">
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label for="product_type">Product Type</label>
-                        <select id="product_type" name="product_type">
-                            <option value="ALL">All Products</option>
-                            <option value="DYED">DYED</option>
-                            <option value="PRINT">PRINT</option>
-                            <option value="CHECKS">CHECKS</option>
-                            <option value="STRIPES">STRIPES</option>
-                            <option value="WHITE">WHITE</option>
-                            <option value="YD+PRINT">YD+PRINT</option>
-                            <option value="WHITE+PRINT">WHITE+PRINT</option>
-                            <option value="DYED+PRINT">DYED+PRINT</option>
-                            <option value="YD+PIGMENT PRINT">YD+PIGMENT PRINT</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="weave">Weave</label>
-                        <select id="weave" name="weave">
-                            <option value="ALL">All Weaves</option>
-                            <option value="PLAIN">PLAIN</option>
-                            <option value="TWILL">TWILL</option>
-                            <option value="DOBBY">DOBBY</option>
-                            <option value="SATIN">SATIN</option>
-                            <option value="HBT">HBT</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="yarn">Yarn Type</label>
-                        <select id="yarn" name="yarn">
-                            <option value="ALL">All Yarn Types</option>
-                            <option value="COMPACT">COMPACT</option>
-                            <option value="COMBED">COMBED</option>
-                            <option value="SLUB">SLUB</option>
-                            <option value="TFO">TFO</option>
-                            <option value="CARDED">CARDED</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="blend">Composition/Blend</label>
-                        <input type="text" id="blend" name="blend" placeholder="e.g., cotton, modal, viscose">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="gsm_min">GSM Range (Min)</label>
-                        <input type="number" id="gsm_min" name="gsm_min" placeholder="e.g., 100" min="0">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="gsm_max">GSM Range (Max)</label>
-                        <input type="number" id="gsm_max" name="gsm_max" placeholder="e.g., 200" min="0">
-                    </div>
-                </div>
-
-                <div class="form-group" style="grid-column: 1 / -1;">
-                    <label for="feel_terms">Performance/Feel Terms</label>
-                    <input type="text" id="feel_terms" name="feel_terms" placeholder="e.g., soft feel, breathable, shiny" style="min-height: 60px;">
-                </div>
-
-                <div class="button-group">
-                    <button type="reset" class="btn-reset">Clear</button>
-                    <button type="submit" class="btn-search">Search Samples</button>
-                </div>
-            </form>
+    <div class="app-layout">
+        <!-- ======= SIDEBAR ======= -->
+        <div class="sidebar">
+            <div class="sidebar-label">Menu</div>
+            <div class="nav-item active" onclick="switchPage('search', this)">
+                <span class="nav-icon">&#128269;</span>
+                <span>Search</span>
+            </div>
+            <div class="nav-item" onclick="switchPage('wishlist', this)">
+                <span class="nav-icon">&#10084;</span>
+                <span>Wishlist</span>
+                <span class="nav-badge" id="wishlistBadge">0</span>
+            </div>
+            <div class="nav-item" onclick="switchPage('data', this)">
+                <span class="nav-icon">&#128202;</span>
+                <span>Data</span>
+            </div>
         </div>
 
-        <div class="loading" id="loading">
-            <div class="spinner"></div>
-            <p>Searching samples...</p>
-        </div>
+        <!-- ======= MAIN CONTENT ======= -->
+        <div class="main-content">
 
-        <div class="error-message" id="errorMessage"></div>
+            <!-- ---- SEARCH PAGE ---- -->
+            <div id="page-search" class="page-section active">
+                <div class="container">
+                    <div class="card">
+                        <h2 style="margin-bottom: 1.5rem; color: #1a2740;">Search Fabric Samples</h2>
+                        <form id="searchForm">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="product_type">Product Type</label>
+                                    <select id="product_type" name="product_type">
+                                        <option value="ALL">All Products</option>
+                                        <option value="DYED">DYED</option>
+                                        <option value="PRINT">PRINT</option>
+                                        <option value="CHECKS">CHECKS</option>
+                                        <option value="STRIPES">STRIPES</option>
+                                        <option value="WHITE">WHITE</option>
+                                        <option value="YD+PRINT">YD+PRINT</option>
+                                        <option value="WHITE+PRINT">WHITE+PRINT</option>
+                                        <option value="DYED+PRINT">DYED+PRINT</option>
+                                        <option value="YD+PIGMENT PRINT">YD+PIGMENT PRINT</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="weave">Weave</label>
+                                    <select id="weave" name="weave">
+                                        <option value="ALL">All Weaves</option>
+                                        <option value="PLAIN">PLAIN</option>
+                                        <option value="TWILL">TWILL</option>
+                                        <option value="DOBBY">DOBBY</option>
+                                        <option value="SATIN">SATIN</option>
+                                        <option value="HBT">HBT</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="yarn">Yarn Type</label>
+                                    <select id="yarn" name="yarn">
+                                        <option value="ALL">All Yarn Types</option>
+                                        <option value="COMPACT">COMPACT</option>
+                                        <option value="COMBED">COMBED</option>
+                                        <option value="SLUB">SLUB</option>
+                                        <option value="TFO">TFO</option>
+                                        <option value="CARDED">CARDED</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="blend">Composition/Blend</label>
+                                    <input type="text" id="blend" name="blend" placeholder="e.g., cotton, modal, viscose">
+                                </div>
+                                <div class="form-group">
+                                    <label for="gsm_min">GSM Min</label>
+                                    <input type="number" id="gsm_min" name="gsm_min" placeholder="e.g., 100" min="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="gsm_max">GSM Max</label>
+                                    <input type="number" id="gsm_max" name="gsm_max" placeholder="e.g., 200" min="0">
+                                </div>
+                                <div class="form-group full-width">
+                                    <label for="feel_terms">Performance / Feel Terms</label>
+                                    <input type="text" id="feel_terms" name="feel_terms" placeholder="e.g., soft feel, shiny, stretchable">
+                                </div>
+                            </div>
+                            <div class="button-group">
+                                <button type="reset" class="btn-reset">Clear</button>
+                                <button type="submit" class="btn-search">Search Samples</button>
+                            </div>
+                        </form>
+                    </div>
 
-        <div class="results-section" id="resultsSection">
-            <div class="card">
-                <div class="results-info">
-                    <h3><span id="resultCount">0</span> samples found</h3>
-                    <div id="termsDisplay"></div>
+                    <div class="loading" id="loading">
+                        <div class="spinner"></div><p>Searching samples...</p>
+                    </div>
+                    <div class="error-message" id="errorMessage"></div>
+
+                    <div class="results-section" id="resultsSection">
+                        <div class="results-info">
+                            <h3><span id="resultCount">0</span> samples found</h3>
+                            <div id="termsDisplay"></div>
+                        </div>
+                        <div class="samples-grid" id="resultsContent"></div>
+                    </div>
                 </div>
+            </div>
 
-                <div id="resultsContent"></div>
+            <!-- ---- WISHLIST PAGE ---- -->
+            <div id="page-wishlist" class="page-section">
+                <div class="container">
+                    <div class="page-header">
+                        <h2>My Wishlist</h2>
+                        <span class="count-badge" id="wishlistCount">0 samples</span>
+                    </div>
+                    <div class="group-bar" id="groupBar">
+                        <!-- group chips rendered by JS -->
+                    </div>
+                    <div id="wishlistContent">
+                        <div class="empty-state">
+                            <div class="empty-icon">&#10084;</div>
+                            <p>Your wishlist is empty</p>
+                            <p class="sub">Create a group, then click on any sample to add it</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ---- DATA PAGE ---- -->
+            <div id="page-data" class="page-section">
+                <div class="container">
+                    <div class="page-header">
+                        <h2>All Fabric Samples</h2>
+                        <span class="count-badge" id="dataCount">Loading...</span>
+                    </div>
+                    <div class="loading show" id="dataLoading">
+                        <div class="spinner"></div><p>Loading all samples...</p>
+                    </div>
+                    <div class="samples-grid" id="dataGrid"></div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ======= SAMPLE DETAIL MODAL ======= -->
+    <div class="modal-overlay" id="sampleModal">
+        <div class="modal-box">
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+            <img class="modal-img" id="modalImg" src="" alt="">
+            <div class="modal-body">
+                <div class="modal-title">
+                    <h2 id="modalSampleNo"></h2>
+                    <span id="modalArticle"></span>
+                </div>
+                <div class="modal-props" id="modalProps"></div>
+                <div class="modal-wishlist-bar">
+                    <select id="modalGroupSelect">
+                        <option value="">-- Select Wishlist Group --</option>
+                    </select>
+                    <button class="btn-add-wish" onclick="addFromModal()">Add to Wishlist</button>
+                </div>
+                <div class="modal-msg" id="modalMsg">Added to wishlist!</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======= NEW GROUP MODAL ======= -->
+    <div class="group-modal-overlay" id="groupModal">
+        <div class="group-modal-box">
+            <h3>Create Wishlist Group</h3>
+            <input type="text" id="groupNameInput" placeholder="e.g., Brother, Sister, Mom...">
+            <div class="group-modal-actions">
+                <button class="btn-cancel-group" onclick="closeGroupModal()">Cancel</button>
+                <button class="btn-save-group" onclick="saveNewGroup()">Create</button>
             </div>
         </div>
     </div>
 
     <script>
+        let allGroups = [];       // [{id, name}]
+        let wishlistData = null;  // full wishlist response
+        let activeGroupId = null; // currently viewed group in wishlist tab
+        let allSamplesCache = []; // for detail modal
+
+        /* ---- PAGE SWITCHING ---- */
+        function switchPage(page, el) {
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.querySelectorAll('.page-section').forEach(p => p.classList.remove('active'));
+            document.getElementById('page-' + page).classList.add('active');
+            if (el) el.classList.add('active');
+            if (page === 'data' && !window._dataLoaded) loadAllSamples();
+            if (page === 'wishlist') loadWishlist();
+        }
+
+        /* ---- CARD BUILDER ---- */
+        function buildSampleCard(sample, rankInfo) {
+            let html = '<div class="sample-card" id="card-' + sample.sample_no + '" onclick="openModal(' + sample.sample_no + ')">';
+            if (rankInfo) {
+                html += '<span class="rank-badge ' + rankInfo.cls + '">#' + rankInfo.rank + '</span>';
+                html += '<span class="rank-label">' + rankInfo.label + '</span>';
+            }
+            html += '<img class="sample-card-img" src="/sample-image/' + sample.sample_no + '" alt="Sample ' + sample.sample_no + '" onerror="this.style.background=\'#ddd\';this.style.height=\'140px\'">';
+            html += '<div class="sample-card-body">';
+            html += '<div class="sample-card-header">';
+            html += '<span class="sample-card-no">' + sample.sample_no + '</span>';
+            html += '<span class="sample-card-article">' + sample.article + '</span>';
+            html += '</div>';
+            html += '<div class="sample-card-props">';
+            html += prop('Product', sample.product);
+            html += prop('Yarn', sample.yarn);
+            html += prop('Count', sample.count);
+            html += prop('GSM', sample.gsm);
+            html += prop('Blend', sample.blend);
+            html += prop('Weave', sample.weave);
+            html += prop('Finish', sample.finish);
+            html += '</div></div></div>';
+            return html;
+        }
+
+        function prop(label, value) {
+            return '<div class="sample-prop"><div class="sample-prop-label">' + label + '</div><div class="sample-prop-value">' + value + '</div></div>';
+        }
+
+        /* ============ SAMPLE DETAIL MODAL ============ */
+        function openModal(sampleNo) {
+            const sample = findSample(sampleNo);
+            if (!sample) return;
+            document.getElementById('modalImg').src = '/sample-image/' + sample.sample_no;
+            document.getElementById('modalSampleNo').textContent = 'Sample ' + sample.sample_no;
+            document.getElementById('modalArticle').textContent = sample.article;
+            const props = [
+                ['Product', sample.product], ['Yarn', sample.yarn], ['Count', sample.count],
+                ['Construction', sample.construction || '-'], ['Blend', sample.blend], ['Weave', sample.weave],
+                ['Finish', sample.finish], ['GSM', sample.gsm], ['Count Avg', sample.count_avg || '-']
+            ];
+            let ph = '';
+            props.forEach(function(p) {
+                ph += '<div class="modal-prop"><div class="modal-prop-label">' + p[0] + '</div><div class="modal-prop-value">' + p[1] + '</div></div>';
+            });
+            document.getElementById('modalProps').innerHTML = ph;
+            // populate group dropdown
+            refreshGroupDropdown();
+            document.getElementById('modalMsg').classList.remove('show');
+            document.getElementById('sampleModal').dataset.sampleNo = sampleNo;
+            document.getElementById('sampleModal').classList.add('show');
+        }
+
+        function closeModal() {
+            document.getElementById('sampleModal').classList.remove('show');
+        }
+
+        function refreshGroupDropdown() {
+            const sel = document.getElementById('modalGroupSelect');
+            sel.innerHTML = '<option value="">-- Select Wishlist Group --</option>';
+            allGroups.forEach(function(g) {
+                sel.innerHTML += '<option value="' + g.id + '">' + g.name + '</option>';
+            });
+        }
+
+        async function addFromModal() {
+            const groupId = document.getElementById('modalGroupSelect').value;
+            const sampleNo = document.getElementById('sampleModal').dataset.sampleNo;
+            if (!groupId) { alert('Please select a wishlist group first'); return; }
+            await fetch('/api/wishlist/add', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({sample_no: parseInt(sampleNo), group_id: parseInt(groupId)})
+            });
+            const msg = document.getElementById('modalMsg');
+            const groupName = allGroups.find(g => g.id == groupId).name;
+            msg.textContent = 'Added to "' + groupName + '" wishlist!';
+            msg.classList.add('show');
+            setTimeout(function(){ msg.classList.remove('show'); }, 2000);
+            loadWishlistBadge();
+        }
+
+        // click outside modal to close
+        document.getElementById('sampleModal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+
+        function findSample(sampleNo) {
+            if (allSamplesCache.length > 0) {
+                const found = allSamplesCache.find(s => s.sample_no == sampleNo);
+                if (found) return found;
+            }
+            // try search results
+            const cards = document.querySelectorAll('.sample-card');
+            // fallback: fetch sync is not ideal, but we cache on first data/search load
+            return null;
+        }
+
+        /* ============ WISHLIST GROUPS ============ */
+        function openGroupModal() {
+            document.getElementById('groupNameInput').value = '';
+            document.getElementById('groupModal').classList.add('show');
+        }
+        function closeGroupModal() {
+            document.getElementById('groupModal').classList.remove('show');
+        }
+
+        async function saveNewGroup() {
+            const name = document.getElementById('groupNameInput').value.trim();
+            if (!name) return;
+            const res = await fetch('/api/wishlist/groups/create', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({name: name})
+            });
+            const data = await res.json();
+            if (data.error) { alert(data.error); return; }
+            closeGroupModal();
+            await loadGroupsList();
+            loadWishlist();
+        }
+
+        async function deleteGroup(groupId, e) {
+            e.stopPropagation();
+            if (!confirm('Delete this group and all its items?')) return;
+            await fetch('/api/wishlist/groups/delete', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({group_id: groupId})
+            });
+            await loadGroupsList();
+            activeGroupId = null;
+            loadWishlist();
+        }
+
+        async function loadGroupsList() {
+            const res = await fetch('/api/wishlist/groups');
+            const data = await res.json();
+            allGroups = data.groups;
+        }
+
+        function renderGroupBar(groups, activeId) {
+            const bar = document.getElementById('groupBar');
+            let html = '';
+            groups.forEach(function(g) {
+                const cls = g.id === activeId ? 'group-chip active' : 'group-chip';
+                html += '<div class="' + cls + '" onclick="selectGroup(' + g.id + ')">';
+                html += '<span>' + g.name + '</span>';
+                html += '<span class="delete-group" onclick="deleteGroup(' + g.id + ', event)" title="Delete group">&times;</span>';
+                html += '</div>';
+            });
+            html += '<button class="add-group-btn" onclick="openGroupModal()">+ New Group</button>';
+            bar.innerHTML = html;
+        }
+
+        function selectGroup(groupId) {
+            activeGroupId = groupId;
+            renderWishlistContent();
+        }
+
+        async function loadWishlist() {
+            await loadGroupsList();
+            const res = await fetch('/api/wishlist');
+            wishlistData = await res.json();
+            // cache samples
+            wishlistData.groups.forEach(function(g) {
+                g.samples.forEach(function(s) {
+                    if (!allSamplesCache.find(x => x.sample_no === s.sample_no)) allSamplesCache.push(s);
+                });
+            });
+            updateWishlistBadge();
+            document.getElementById('wishlistCount').textContent = wishlistData.total_count + ' samples';
+            if (allGroups.length > 0 && !activeGroupId) activeGroupId = allGroups[0].id;
+            renderGroupBar(allGroups, activeGroupId);
+            renderWishlistContent();
+        }
+
+        function renderWishlistContent() {
+            renderGroupBar(allGroups, activeGroupId);
+            const container = document.getElementById('wishlistContent');
+            if (!wishlistData || allGroups.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="empty-icon">&#10084;</div><p>No groups yet</p><p class="sub">Click "+ New Group" to create a wishlist group</p></div>';
+                return;
+            }
+            const grp = wishlistData.groups.find(g => g.group_id === activeGroupId);
+            if (!grp || grp.samples.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="empty-icon">&#128203;</div><p>This group is empty</p><p class="sub">Click on any sample card to add it here</p></div>';
+                return;
+            }
+            let html = '<div class="samples-grid">';
+            grp.samples.forEach(function(s) {
+                html += buildSampleCard(s, null);
+                // add remove button overlay
+                html = html.slice(0, -6); // remove last </div>
+                html += '<div style="padding:0.5rem 1.1rem 1rem;text-align:right;">';
+                html += '<button style="padding:0.4rem 1rem;border-radius:6px;border:1.5px solid #ef5350;background:white;color:#ef5350;font-weight:600;font-size:0.8rem;cursor:pointer;" onclick="event.stopPropagation();removeFromGroup(' + s.sample_no + ',' + activeGroupId + ')">Remove</button>';
+                html += '</div></div>';
+            });
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        async function removeFromGroup(sampleNo, groupId) {
+            await fetch('/api/wishlist/remove', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({sample_no: sampleNo, group_id: groupId})
+            });
+            loadWishlist();
+        }
+
+        function updateWishlistBadge() {
+            const cnt = wishlistData ? wishlistData.total_count : 0;
+            document.getElementById('wishlistBadge').textContent = cnt;
+        }
+
+        async function loadWishlistBadge() {
+            const res = await fetch('/api/wishlist');
+            wishlistData = await res.json();
+            updateWishlistBadge();
+        }
+        loadWishlistBadge();
+        loadGroupsList();
+
+        /* ============ SEARCH ============ */
         document.getElementById("searchForm").addEventListener("submit", async function(e) {
             e.preventDefault();
-
             const loading = document.getElementById("loading");
             const resultsSection = document.getElementById("resultsSection");
             const errorMessage = document.getElementById("errorMessage");
-
             loading.classList.add("show");
             resultsSection.classList.remove("show");
             errorMessage.classList.remove("show");
-
-            const formData = new FormData(this);
-
             try {
-                const response = await fetch("/search", {
-                    method: "POST",
-                    body: formData
-                });
-
+                const response = await fetch("/search", { method: "POST", body: new FormData(this) });
                 const data = await response.json();
                 loading.classList.remove("show");
-
+                // cache for modal
+                data.results.forEach(function(s) {
+                    if (!allSamplesCache.find(x => x.sample_no === s.sample_no)) allSamplesCache.push(s);
+                });
                 displayResults(data);
                 resultsSection.classList.add("show");
-
             } catch (error) {
                 loading.classList.remove("show");
                 errorMessage.textContent = "Error performing search. Please try again.";
                 errorMessage.classList.add("show");
-                console.error("Search error:", error);
             }
         });
 
         function displayResults(data) {
-            const resultCount = document.getElementById("resultCount");
+            document.getElementById("resultCount").textContent = data.total_count;
             const termsDisplay = document.getElementById("termsDisplay");
             const resultsContent = document.getElementById("resultsContent");
-
-            resultCount.textContent = data.total_count;
-
             if (data.standard_terms.length > 0) {
                 const tags = data.standard_terms.map(t => '<span class="tag">' + t + '</span>').join("");
-                termsDisplay.innerHTML = '<p style="margin-top: 0.5rem; font-weight: 500;">Detected Properties:</p><div class="tags">' + tags + '</div>';
-            } else {
-                termsDisplay.innerHTML = "";
-            }
-
+                termsDisplay.innerHTML = '<p style="margin-top:0.5rem;font-weight:500;">Detected Properties:</p><div class="tags">' + tags + '</div>' +
+                    '<p style="margin-top:0.5rem;font-size:0.88rem;color:#556b2f;">Sorted by best match — top recommendations first</p>';
+            } else { termsDisplay.innerHTML = ""; }
             if (data.results.length === 0) {
-                resultsContent.innerHTML = '<div class="no-results"><p>No samples matched your requirements.</p></div>';
-            } else {
-                let tableHTML = '<div class="table-wrapper"><table><thead><tr>';
-                tableHTML += '<th>Sample No</th><th>Article</th><th>Product</th><th>Yarn</th><th>Count</th><th>GSM</th><th>Blend</th><th>Weave</th><th>Finish</th>';
-                tableHTML += '</tr></thead><tbody>';
+                resultsContent.innerHTML = '<div class="no-results" style="grid-column:1/-1;"><p>No samples matched your requirements.</p></div>';
+                return;
+            }
+            const hasRank = data.standard_terms.length > 0;
+            let html = '';
+            data.results.forEach(function(sample, index) {
+                let rankInfo = null;
+                if (hasRank) {
+                    const rank = sample.rank || (index + 1);
+                    let cls = 'rank-normal', label = 'Match';
+                    if (rank === 1) { cls = 'rank-top'; label = 'Best Match'; }
+                    else if (rank <= 3) { cls = 'rank-top'; label = 'Top Pick'; }
+                    else if (rank <= Math.ceil(data.total_count * 0.4)) { cls = 'rank-mid'; label = 'Good Match'; }
+                    rankInfo = { rank: rank, cls: cls, label: label };
+                }
+                html += buildSampleCard(sample, rankInfo);
+            });
+            resultsContent.innerHTML = html;
+        }
 
-                data.results.forEach(function(sample) {
-                    tableHTML += '<tr>';
-                    tableHTML += '<td class="sample-no">' + sample.sample_no + '</td>';
-                    tableHTML += '<td>' + sample.article + '</td>';
-                    tableHTML += '<td>' + sample.product + '</td>';
-                    tableHTML += '<td>' + sample.yarn + '</td>';
-                    tableHTML += '<td>' + sample.count + '</td>';
-                    tableHTML += '<td>' + sample.gsm + '</td>';
-                    tableHTML += '<td>' + sample.blend + '</td>';
-                    tableHTML += '<td>' + sample.weave + '</td>';
-                    tableHTML += '<td>' + sample.finish + '</td>';
-                    tableHTML += '</tr>';
-                });
-
-                tableHTML += '</tbody></table></div>';
-                resultsContent.innerHTML = tableHTML;
+        /* ============ DATA PAGE ============ */
+        async function loadAllSamples() {
+            try {
+                const response = await fetch("/api/samples");
+                const data = await response.json();
+                document.getElementById("dataLoading").classList.remove("show");
+                document.getElementById("dataCount").textContent = data.total_count + " samples";
+                allSamplesCache = data.samples;
+                let html = '';
+                data.samples.forEach(function(sample) { html += buildSampleCard(sample, null); });
+                document.getElementById("dataGrid").innerHTML = html;
+                window._dataLoaded = true;
+            } catch (error) {
+                document.getElementById("dataLoading").innerHTML = '<p style="color:#c62828;">Failed to load samples.</p>';
             }
         }
     </script>
 </body>
 </html>
 """
+
+seed_database()
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
