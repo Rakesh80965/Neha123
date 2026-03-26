@@ -13,8 +13,6 @@ app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", os.urandom(24).hex())
 SUPABASE_URL = "https://gscxycvoeprxmkzfvnks.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdzY3h5Y3ZvZXByeG1remZ2bmtzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNjA0OTAsImV4cCI6MjA4OTkzNjQ5MH0.CVqLTwGfTCdA2EeSu2ayEv3ID4P68STHgm8XM0c-rus"
 
-_http = httpx.Client(timeout=30.0)
-
 def _sb_headers(extra=None):
     h = {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}", "Content-Type": "application/json"}
     if extra:
@@ -22,14 +20,14 @@ def _sb_headers(extra=None):
     return h
 
 def sb_auth_signup(email, password):
-    r = _http.post(f"{SUPABASE_URL}/auth/v1/signup", json={"email": email, "password": password}, headers=_sb_headers())
+    r = httpx.post(f"{SUPABASE_URL}/auth/v1/signup", json={"email": email, "password": password}, headers=_sb_headers(), timeout=30.0)
     if r.status_code >= 400:
         data = r.json()
         raise Exception(data.get("msg") or data.get("error_description") or data.get("message") or r.text)
     return r.json()
 
 def sb_auth_signin(email, password):
-    r = _http.post(f"{SUPABASE_URL}/auth/v1/token?grant_type=password", json={"email": email, "password": password}, headers=_sb_headers())
+    r = httpx.post(f"{SUPABASE_URL}/auth/v1/token?grant_type=password", json={"email": email, "password": password}, headers=_sb_headers(), timeout=30.0)
     if r.status_code >= 400:
         data = r.json()
         raise Exception(data.get("error_description") or data.get("msg") or data.get("message") or r.text)
@@ -43,17 +41,17 @@ def sb_select(table, columns="*", filters=None, order=None, limit=None):
         params["limit"] = str(limit)
     if filters:
         params.update(filters)
-    r = _http.get(f"{SUPABASE_URL}/rest/v1/{table}", params=params, headers=_sb_headers())
+    r = httpx.get(f"{SUPABASE_URL}/rest/v1/{table}", params=params, headers=_sb_headers(), timeout=30.0)
     r.raise_for_status()
     return r.json()
 
 def sb_insert(table, data):
-    r = _http.post(f"{SUPABASE_URL}/rest/v1/{table}", json=data, headers=_sb_headers({"Prefer": "return=representation"}))
+    r = httpx.post(f"{SUPABASE_URL}/rest/v1/{table}", json=data, headers=_sb_headers({"Prefer": "return=representation"}), timeout=30.0)
     r.raise_for_status()
     return r.json()
 
 def sb_delete(table, filters):
-    r = _http.delete(f"{SUPABASE_URL}/rest/v1/{table}", params=filters, headers=_sb_headers())
+    r = httpx.delete(f"{SUPABASE_URL}/rest/v1/{table}", params=filters, headers=_sb_headers(), timeout=30.0)
     r.raise_for_status()
 
 # ============================================================================
