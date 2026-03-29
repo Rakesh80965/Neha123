@@ -1450,7 +1450,7 @@ DASHBOARD_TEMPLATE = r"""
     <div class="group-modal-overlay" id="groupModal">
         <div class="group-modal-box">
             <h3>Create Wishlist Group</h3>
-            <input type="text" id="groupNameInput" placeholder="e.g., Brother, Sister, Mom...">
+            <input type="text" id="groupNameInput" placeholder="e.g.,  Arvind, Aditya Birla....">
             <div class="group-modal-actions">
                 <button class="btn-cancel-group" onclick="closeGroupModal()">Cancel</button>
                 <button class="btn-save-group" onclick="saveNewGroup()">Create</button>
