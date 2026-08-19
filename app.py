@@ -2278,7 +2278,7 @@ DASHBOARD_TEMPLATE = r"""
                                 </div>
                                 <div class="form-group full-width">
                                     <label for="feel_terms">Performance / Feel Terms</label>
-                                    <input type="text" id="feel_terms" name="feel_terms" placeholder="e.g., soft feel, shiny, stretchable, good drape">
+                                    <input type="text" id="feel_terms" name="feel_terms" placeholder="e.g., soft feel, shiny, stretchable, crisp">
                                 </div>
                             </div>
                             <div class="button-group">

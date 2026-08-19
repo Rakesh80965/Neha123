@@ -18,7 +18,7 @@ export const SearchPage = ({ onOpenModal }) => {
   const [resultsData, setResultsData] = useState(null);
   const [error, setError] = useState('');
 
-  const suggestChips = ['Soft Feel', 'Good Drape', 'Shiny', 'Crisp', 'Stretchable', 'Easy Care', 'Textured', 'Anti Microbial'];
+  const suggestChips = ['Soft Feel', 'Shiny', 'Crisp', 'Stretchable', 'Easy Care', 'Anti Microbial'];
 
   const handleChipClick = (term) => {
     if (!feelTerms) setFeelTerms(term);
@@ -214,7 +214,7 @@ export const SearchPage = ({ onOpenModal }) => {
               <input
                 type="text"
                 className="input-field"
-                placeholder="e.g., soft feel, shiny, stretchable, good drape"
+                placeholder="e.g., soft feel, shiny, stretchable, crisp"
                 value={feelTerms}
                 onChange={(e) => setFeelTerms(e.target.value)}
               />
